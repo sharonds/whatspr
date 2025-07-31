@@ -1,0 +1,16 @@
+flow_id: pr_intake
+goal: "Collect facts for a funding press release"
+max_turns: 12
+slots:
+  - id: announcement_type
+    ask: "What type of announcement is this?"
+  - id: headline
+    ask: "Do you have a headline in mind?"
+  - id: key_facts
+    ask: "List the key facts: who, what, when, how much, investors."
+  - id: quotes
+    ask: "Provide two short quotes—one from the CEO and one from an investor."
+  - id: boilerplate
+    ask: "Share a one-paragraph company boilerplate."
+  - id: media_contact
+    ask: "Who is the media contact (name, email, phone)?"
