@@ -12,6 +12,8 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
         log.info("start", id=rid, path=request.url.path)
         try:
             resp: Response = await call_next(request)
+            resp_text = getattr(resp, "body", b"")[:200]
+            log.info("response_sample", id=rid, body=resp_text.decode(errors="ignore"))
             log.info("end", id=rid, status=resp.status_code,
                      latency_ms=int((time.time()-start)*1000))
             return resp
