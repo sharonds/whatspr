@@ -34,7 +34,14 @@ def save_answer(session_id: int, field: str, value: str):
 
 def next_unanswered_field(session_id: int) -> Optional[str]:
     answered = set(answered_fields(session_id))
-    for f in settings.required_fields:
+
+    # Use flow spec if available, otherwise fall back to legacy required_fields
+    if settings.flow and 'slots' in settings.flow:
+        field_list = [slot['id'] for slot in settings.flow['slots']]
+    else:
+        field_list = settings.required_fields
+
+    for f in field_list:
         if f not in answered:
             return f
     return None
