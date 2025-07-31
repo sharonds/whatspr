@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 import structlog
 from sqlmodel import Session
+from twilio.twiml.messaging_response import MessagingResponse
 
 from .logging_config import configure_logging
 from .middleware import RequestLogMiddleware
@@ -33,6 +34,11 @@ def _startup():
 def _plain(text: str):
     return PlainTextResponse(text)
 
+def twiml_message(text: str) -> Response:
+    resp = MessagingResponse()
+    resp.message(text)
+    return Response(str(resp), media_type="application/xml")
+
 def _force_new_session(phone: str) -> SessionModel:
     with Session(engine) as db:
         s = SessionModel(phone=phone)
@@ -48,20 +54,20 @@ async def whatsapp(request: Request):
     sid  = form.get("MessageSid", "")
 
     if not phone:
-        return _plain("No phone.")
+        return twiml_message("No phone.")
 
     # reset keyword
     if body.lower().split()[0] in RESET_WORDS:
         session = _force_new_session(phone)
         record_message_sid(session.id, sid)
         first_field = settings.required_fields[0]
-        return _plain("Starting fresh – " + question_for(first_field))
+        return twiml_message("Starting fresh – " + question_for(first_field))
 
     session = get_or_create_session(phone)
 
     # dedup
     if not record_message_sid(session.id, sid):
-        return _plain("Duplicate ignored")
+        return twiml_message("Duplicate ignored")
 
     # save answer for current field
     ans_count = len(answered_fields(session.id))
@@ -72,10 +78,10 @@ async def whatsapp(request: Request):
 
     next_field = next_unanswered_field(session.id)
     if next_field:
-        return _plain(question_for(next_field))
+        return twiml_message(question_for(next_field))
     else:
         # mark complete
         with Session(engine) as db:
             session.completed = True
             db.add(session); db.commit()
-        return _plain("Great, that's everything. We'll draft your press release soon.")
+        return twiml_message("Great, that's everything. We'll draft your press release soon.")
