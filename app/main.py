@@ -26,24 +26,31 @@ app.add_middleware(RequestLogMiddleware)
 
 RESET_WORDS = {"reset", "new", "start"}
 
+
 @app.on_event("startup")
 def _startup():
     init_db()
     log.info("db_ready")
 
+
 def _plain(text: str):
     return PlainTextResponse(text)
+
 
 def twiml_message(text: str) -> Response:
     resp = MessagingResponse()
     resp.message(text)
     return Response(str(resp), media_type="application/xml")
 
+
 def _force_new_session(phone: str) -> SessionModel:
     with Session(engine) as db:
         s = SessionModel(phone=phone)
-        db.add(s); db.commit(); db.refresh(s)
+        db.add(s)
+        db.commit()
+        db.refresh(s)
         return s
+
 
 @app.post("/whatsapp")
 async def whatsapp(request: Request):
@@ -51,7 +58,7 @@ async def whatsapp(request: Request):
     form = await request.form()
     phone = form.get("From", "")
     body = form.get("Body", "").strip()
-    sid  = form.get("MessageSid", "")
+    sid = form.get("MessageSid", "")
 
     if not phone:
         return twiml_message("No phone.")
@@ -83,5 +90,6 @@ async def whatsapp(request: Request):
         # mark complete
         with Session(engine) as db:
             session.completed = True
-            db.add(session); db.commit()
+            db.add(session)
+            db.commit()
         return twiml_message("Great, that's everything. We'll draft your press release soon.")
