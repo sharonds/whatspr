@@ -1,36 +1,34 @@
-# WhatsPR MVP (Day 0)
+# WhatsPR Day‑1 Stable Baseline
 
-A lightning‑weight FastAPI WhatsApp bot that collects structured answers for a future press‑release generator.
+Minimal, deterministic question flow **plus**:
+* Twilio HMAC verification
+* Duplicate‑Message guard
+* `RESET / new / start` keyword
+* SQLite persistence
+* Structured JSON logging with `structlog`
+* Request‑level middleware (start/end/error, latency)
 
-## Quickstart (Local Tunnel)
+## 1. Setup
+
 ```bash
+cd <your repo root>
+unzip -o whatspr_day1_stable.zip           # overwrite / add files
 python -m venv env && source env/bin/activate
 pip install -r requirements.txt
-
-cp .env.example .env  # fill your real keys
+cp .env.example .env                       # fill TWILIO_AUTH_TOKEN
+pytest -q                                  # 2 tests should pass
 uvicorn app.main:app --reload --port 8000
-
-# in another shell
-ngrok http 8000
-# paste the https URL into Twilio Sandbox -> Messaging -> Webhook URL
+ngrok http 8000                            # paste URL into Twilio sandbox webhook
 ```
 
-## Folder layout
-```
-app/
-  main.py          # FastAPI entry
-  config.py        # env & settings
-  models.py        # SQLModel ORM + init_db()
-  router.py        # tiny finite‑state engine
-  logging_config.py
-tests/
-  test_router.py
+## 2. Git flow
+
+```bash
+git checkout -b day1-stable-baseline
+git add .
+git commit -m "Day 1 stable baseline with logging & tests"
+git push -u origin day1-stable-baseline
+# Open PR → reviewers → merge
 ```
 
-## Roadmap
-- **Day 1**: Add OpenAI-powered follow‑up phrasing, structlog JSON logs, HMAC signature unit‑test.
-- **Day 2**: Containerise & deploy to Cloud Run (`gcloud run deploy --source .`).
-- **Day 3**: Swap SQLite → Cloud SQL Postgres; enable `min-instances 1`.
-- **Day 4+**: Background email task → Cloud Tasks; add simple admin UI.
-
-See `ROADMAP.md` for details.
+After merge, deploy to Cloud Run with `--min-instances 1` and point Twilio webhook to the Cloud Run URL.
