@@ -1,9 +1,10 @@
 flow_id: pr_intake
 version: "2025-08-01"
 intro: |
-  🚀 Great news! I’ll collect just a few details to draft your press‑release.
+  🚀 Great news! I'll collect just a few details to draft your press‑release.
 outro: |
-  ✅ Got everything—expect your draft in 24 h. Reply /status anytime.
+  ✅ Got everything—expect your draft in 24 h. Reply /status anytime.
+goal: "Collect facts for a funding press release"
 max_turns: 12
 slots:
   - id: announcement_type
