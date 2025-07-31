@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
+
 class Settings(BaseSettings):
     twilio_auth_token: str
     required_fields: List[str] = [
@@ -12,5 +13,6 @@ class Settings(BaseSettings):
         "media_contact",
     ]
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
+
 
 settings = Settings()

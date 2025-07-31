@@ -6,6 +6,7 @@ import structlog
 log = structlog.get_logger("security")
 validator = RequestValidator(settings.twilio_auth_token)
 
+
 async def ensure_twilio(request: Request):
     signature = request.headers.get("X-Twilio-Signature", "")
     url = str(request.url)
