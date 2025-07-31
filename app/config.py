@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     def flow(self):
         try:
             from .flow_loader import load_flow
+
             return load_flow(str(self.flow_spec_path))
         except (ImportError, FileNotFoundError):
             # Fallback to legacy behavior if flow spec not found
