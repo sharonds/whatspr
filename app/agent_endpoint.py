@@ -9,11 +9,12 @@ log = structlog.get_logger("agent")
 
 _sessions: dict[str, str] = {}  # phone -> thread_id
 
+
 @router.post("/agent")
 async def agent_hook(request: Request):
     form = await request.form()
-    phone = form.get("From","")
-    body  = form.get("Body","")
+    phone = form.get("From", "")
+    body = form.get("Body", "")
     clean = clean_message(body)
     if clean is None:
         return twiml("Please send text.")

@@ -7,7 +7,8 @@ app = FastAPI()
 
 if os.environ.get("AGENT_MODE") == "true":
     app.include_router(router)
-    
+
+
 @app.get("/")
 async def root():
     if os.environ.get("AGENT_MODE") == "true":

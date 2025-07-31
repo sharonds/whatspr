@@ -14,6 +14,7 @@ if env_file.exists():
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 PROMPT = Path("prompts/assistant.txt").read_text()
 
+
 def create_assistant():
     try:
         # Try to get existing assistant
@@ -22,45 +23,50 @@ def create_assistant():
             if assistant.name == "whatspr-agent":
                 print(f"Assistant already exists: {assistant.id}")
                 return assistant.id
-                
+
         # Create new assistant
         assistant = client.beta.assistants.create(
             name="whatspr-agent",
             instructions=PROMPT,
             model="gpt-4o-mini",
             tools=[
-                {"type": "function", "function": {
-                    "name": "save_slot",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"},
-                            "value": {"type": "string"}
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "save_slot",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {"name": {"type": "string"}, "value": {"type": "string"}},
+                            "required": ["name", "value"],
                         },
-                        "required": ["name", "value"]
-                    }
-                }},
-                {"type": "function", "function": {
-                    "name": "get_slot",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"}
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_slot",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {"name": {"type": "string"}},
+                            "required": ["name"],
                         },
-                        "required": ["name"]
-                    }
-                }},
-                {"type": "function", "function": {
-                    "name": "finish",
-                    "parameters": {"type": "object", "properties": {}}
-                }}
-            ]
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "finish",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                },
+            ],
         )
         print(f"Created new assistant: {assistant.id}")
         return assistant.id
     except Exception as e:
         print(f"Error creating assistant: {e}")
         return None
+
 
 if __name__ == "__main__":
     assistant_id = create_assistant()
