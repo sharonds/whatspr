@@ -2,10 +2,11 @@ import time
 from collections import defaultdict
 
 WINDOW = 3  # seconds
-_buffer: dict[str, tuple[str, float]] = defaultdict(lambda: ("",0.0))
+_buffer: dict[str, tuple[str, float]] = defaultdict(lambda: ("", 0.0))
 
-def aggregate(sender: str, msg:str) -> str|None:
-    text,timestamp = _buffer[sender]
+
+def aggregate(sender: str, msg: str) -> str | None:
+    text, timestamp = _buffer[sender]
     now = time.time()
     if now - timestamp < WINDOW:
         _buffer[sender] = (text + " " + msg, now)
