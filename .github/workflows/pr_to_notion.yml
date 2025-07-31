@@ -1,0 +1,36 @@
+# .github/workflows/pr_to_notion.yml
+name: PR → Notion
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  update-notion:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Notion API
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          DB_ID: ${{ secrets.NOTION_DEV_CYCLE_DB }}
+        run: |
+          cat <<EOF > body.json
+          {
+            "parent": { "database_id": "$DB_ID" },
+            "properties": {
+              "Task": {
+                "title": [{ "text": { "content": "${{ github.event.pull_request.title }}" } }]
+              },
+              "GitHub PR": { "url": "${{ github.event.pull_request.html_url }}" },
+              "Status": { "select": { "name": "Merged" } },
+              "Sprint": { "select": { "name": "Current" } },
+              "Points": { "number": 1 }
+            }
+          }
+          EOF
+
+          curl -s -X POST https://api.notion.com/v1/pages \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data @body.json
