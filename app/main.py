@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
-import logging
+import structlog
 from sqlmodel import Session
 
 from .logging_config import configure_logging
-from .models import init_db, engine
+from .middleware import RequestLogMiddleware
+from .models import init_db, engine, SessionModel
+from .config import settings
 from .router import (
     get_or_create_session,
     save_answer,
@@ -12,96 +14,68 @@ from .router import (
     answered_fields,
     record_message_sid,
 )
-from .security import ensure_valid_twilio
-from .llm import rephrase_question
-from .config import settings
+from .security import ensure_twilio
+from .prompts import question_for
 
 configure_logging()
-log = logging.getLogger("whatspr")
+log = structlog.get_logger("main")
 
-app = FastAPI(title="WhatsPR MVP – Fix reset & better logging")
+app = FastAPI(title="WhatsPR – Day‑1 stable")
+app.add_middleware(RequestLogMiddleware)
+
+RESET_WORDS = {"reset", "new", "start"}
 
 @app.on_event("startup")
 def _startup():
     init_db()
-    log.info("DB initialised")
+    log.info("db_ready")
 
-def _plain(text: str) -> PlainTextResponse:
+def _plain(text: str):
     return PlainTextResponse(text)
 
-# --- helper functions -------------------------------------------------
-
-from .models import SessionModel
-
-RESET_KEYWORDS = {"reset", "new", "start"}
-
-def is_reset(text: str) -> bool:
-    clean = (
-        text.encode("ascii", "ignore")
-            .decode()
-            .lower()
-            .strip()
-            .split()[0]  # take first word only
-    )
-    return clean in RESET_KEYWORDS
-
-def force_new_session(phone: str) -> SessionModel:
+def _force_new_session(phone: str) -> SessionModel:
     with Session(engine) as db:
-        new = SessionModel(phone=phone)
-        db.add(new)
-        db.commit()
-        db.refresh(new)
-        return new
-
-# ----------------------------------------------------------------------
+        s = SessionModel(phone=phone)
+        db.add(s); db.commit(); db.refresh(s)
+        return s
 
 @app.post("/whatsapp")
-async def whatsapp_hook(request: Request):
-    await ensure_valid_twilio(request)
-
+async def whatsapp(request: Request):
+    await ensure_twilio(request)
     form = await request.form()
-    sender = form.get("From", "")
+    phone = form.get("From", "")
     body = form.get("Body", "").strip()
-    msg_sid = form.get("MessageSid")
+    sid  = form.get("MessageSid", "")
 
-    if not sender:
-        return _plain("No sender.")
+    if not phone:
+        return _plain("No phone.")
 
-    # Debug log (PII‑safe)
-    log.info(
-        "incoming",
-        sid=msg_sid,
-        phone_last4=sender[-4:],
-        body_preview=body[:40],
-    )
+    # reset keyword
+    if body.lower().split()[0] in RESET_WORDS:
+        session = _force_new_session(phone)
+        record_message_sid(session.id, sid)
+        first_field = settings.required_fields[0]
+        return _plain("Starting fresh – " + question_for(first_field))
 
-    if is_reset(body):
-        session = force_new_session(sender)
-        record_message_sid(session.id, msg_sid)  # store to avoid duplicates later
-        return _plain(
-            "Starting fresh! " + rephrase_question(settings.required_fields[0])
-        )
+    session = get_or_create_session(phone)
 
-    session = get_or_create_session(sender)
+    # dedup
+    if not record_message_sid(session.id, sid):
+        return _plain("Duplicate ignored")
 
-    # Dedup AFTER reset keyword check
-    if not record_message_sid(session.id, msg_sid):
-        return _plain("Duplicate ignored.")
-
-    already_answered = answered_fields(session.id)
-
-    if len(already_answered) < len(settings.required_fields):
-        field_being_answered = settings.required_fields[len(already_answered)]
-        save_answer(session.id, field_being_answered, body)
-        log.info("saved_answer", field=field_being_answered)
+    # save answer for current field
+    ans_count = len(answered_fields(session.id))
+    if ans_count < len(settings.required_fields):
+        field = settings.required_fields[ans_count]
+        save_answer(session.id, field, body)
+        log.info("saved", phone=phone[-4:], field=field)
 
     next_field = next_unanswered_field(session.id)
-
-    if next_field is None:
+    if next_field:
+        return _plain(question_for(next_field))
+    else:
+        # mark complete
         with Session(engine) as db:
             session.completed = True
-            db.add(session)
-            db.commit()
-        return _plain("Great, that's everything we need! We'll draft your press release shortly.")
-
-    return _plain(rephrase_question(next_field))
+            db.add(session); db.commit()
+        return _plain("Great, that's everything. We'll draft your press release soon.")
