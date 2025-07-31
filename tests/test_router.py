@@ -1,15 +1,10 @@
-from app.router import next_unanswered_field, answered_fields
-from app.models import init_db, engine, SessionModel, Answer
+from app.router import next_unanswered_field, answered_fields, get_or_create_session, save_answer
+from app.models import init_db, engine
 from sqlmodel import Session
-
-def test_next_field():
+def test_flow():
     init_db()
-    with Session(engine) as db:
-        s = SessionModel(phone="+100")
-        db.add(s)
-        db.commit()
-        db.refresh(s)
-        assert next_unanswered_field(s.id) == "announcement_type"
-        db.add(Answer(session_id=s.id, field="announcement_type", value="funding"))
-        db.commit()
-        assert next_unanswered_field(s.id) == "headline"
+    phone = "+100"
+    s = get_or_create_session(phone)
+    assert next_unanswered_field(s.id) == "announcement_type"
+    save_answer(s.id, "announcement_type", "funding")
+    assert next_unanswered_field(s.id) == "headline"
