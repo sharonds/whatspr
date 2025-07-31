@@ -4,3 +4,4 @@ env/
 .env
 .mypy_cache/
 whatspr.db
+.specstory/
