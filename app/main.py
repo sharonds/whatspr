@@ -65,7 +65,13 @@ async def whatsapp(request: Request):
     if body.lower().split()[0] in RESET_WORDS:
         session = _force_new_session(phone)
         record_message_sid(session.id, sid)
-        first_field = settings.required_fields[0]
+
+        # Use flow spec if available, otherwise fall back to legacy required_fields
+        if settings.flow and 'slots' in settings.flow:
+            first_field = settings.flow['slots'][0]['id']
+        else:
+            first_field = settings.required_fields[0]
+
         q = rephrase_question(first_field)
         return twiml("Starting fresh – " + q)
 
@@ -77,8 +83,15 @@ async def whatsapp(request: Request):
 
     # save answer
     ans_count = len(answered_fields(session.id))
-    if ans_count < len(settings.required_fields):
-        field = settings.required_fields[ans_count]
+
+    # Use flow spec if available, otherwise fall back to legacy required_fields
+    if settings.flow and 'slots' in settings.flow:
+        field_list = [slot['id'] for slot in settings.flow['slots']]
+    else:
+        field_list = settings.required_fields
+
+    if ans_count < len(field_list):
+        field = field_list[ans_count]
         save_answer(session.id, field, body)
         log.info("saved", phone=phone[-4:], field=field)
 
