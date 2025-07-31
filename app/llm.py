@@ -5,16 +5,15 @@ import httpx
 
 _client = None
 
+
 def get_client():
     global _client
     if _client is None:
         # Create OpenAI client with compatible httpx configuration
         httpx_client = httpx.Client()
-        _client = OpenAI(
-            api_key=settings.openai_api_key,
-            http_client=httpx_client
-        )
+        _client = OpenAI(api_key=settings.openai_api_key, http_client=httpx_client)
     return _client
+
 
 def rephrase_question(field: str, previous: Optional[str] = None) -> str:
     client = get_client()
@@ -28,7 +27,10 @@ def rephrase_question(field: str, previous: Optional[str] = None) -> str:
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
         temperature=0.3,
-        messages=[{"role": "system", "content": system},
-                  {"role": "user", "content": user}],
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
     )
-    return completion.choices[0].message.content.strip() if completion.choices[0].message.content else ""
+    return (
+        completion.choices[0].message.content.strip()
+        if completion.choices[0].message.content
+        else ""
+    )
