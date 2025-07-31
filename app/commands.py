@@ -44,11 +44,11 @@ COMMANDS = {
 
 def maybe_command(body: str, current_slot: Optional[str] = None):
     """Check if the message is a command and handle it if so.
-    
+
     Args:
         body: The message text to check
         current_slot: The current slot being asked about (for context-specific help)
-        
+
     Returns:
         TwiML Response if command was handled, None otherwise
     """
