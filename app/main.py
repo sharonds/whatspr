@@ -80,27 +80,25 @@ async def whatsapp(request: Request):
         session = _force_new_session(phone)
         if session.id:
             record_message_sid(session.id, sid)
-
         # Show menu instead of going directly to questions
-        return twiml("👋 Hi! Pick the kind of announcement:\n  1️⃣ Funding round\n  2️⃣ Product launch\n  3️⃣ Partnership / integration")
+        return twiml(
+            "👋 Hi! Pick the kind of announcement:\n  1️⃣ Funding round\n  2️⃣ Product launch\n  3️⃣ Partnership / integration"
+        )
 
     session = get_or_create_session(phone)
     if not session.id:
         return twiml("Sorry, there was an error. Please try again.")
 
-    # For completely new sessions, show the menu
-    if len(answered_fields(session.id)) == 0 and body.lower().split()[0] not in RESET_WORDS:
-        # This is a new user, show the menu
-        return twiml("👋 Hi! Pick the kind of announcement:\n  1️⃣ Funding round\n  2️⃣ Product launch\n  3️⃣ Partnership / integration")
-
     # dedup
     if not record_message_sid(session.id, sid):
         return twiml("")
 
-    # Check if this is category selection (menu)
+    # Check how many answers we have to determine flow state
     answered_count = len(answered_fields(session.id))
+
+    # For completely new sessions (no answers), show the menu
     if answered_count == 0:
-        # This is the first message - handle category selection
+        # Check if this is a category selection
         body_lower = body.lower()
         if body_lower in ["1", "fund", "funding", "raise"]:
             save_answer(session.id, "announcement_type", "Funding round")
@@ -112,10 +110,12 @@ async def whatsapp(request: Request):
             save_answer(session.id, "announcement_type", "Partnership / integration")
             log.info("saved", phone=phone[-4:], field="announcement_type")
         else:
-            # Invalid selection, show menu again
-            return twiml("Please choose:\n  1️⃣ Funding round\n  2️⃣ Product launch\n  3️⃣ Partnership / integration")
+            # First time user or invalid selection, show menu
+            return twiml(
+                "👋 Hi! Pick the kind of announcement:\n  1️⃣ Funding round\n  2️⃣ Product launch\n  3️⃣ Partnership / integration"
+            )
     else:
-        # save answer for subsequent questions
+        # We have some answers, continue with normal flow
         # Use flow spec if available, otherwise fall back to legacy required_fields
         if settings.flow and 'slots' in settings.flow:
             field_list = [slot['id'] for slot in settings.flow['slots']]
@@ -127,6 +127,7 @@ async def whatsapp(request: Request):
             save_answer(session.id, field, body)
             log.info("saved", phone=phone[-4:], field=field)
 
+    # Move to next question or complete
     next_field = next_unanswered_field(session.id)
     if next_field:
         return twiml(rephrase_question(next_field))
