@@ -38,3 +38,15 @@ def next_unanswered_field(session_id: int) -> Optional[str]:
         if f not in answered:
             return f
     return None
+
+def close_session(phone: str):
+    """Close any open sessions for the given phone number."""
+    with Session(engine) as db:
+        stmt = select(SessionModel).where(
+            SessionModel.phone == phone, SessionModel.completed == False
+        )
+        session = db.exec(stmt).first()
+        if session:
+            session.completed = True
+            db.add(session)
+            db.commit()
