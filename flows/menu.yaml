@@ -1,0 +1,23 @@
+flow_id: category_menu
+version: "2025-08-02"
+intro: |
+  👋 Hi! Pick the kind of announcement:
+    1️⃣ Funding round
+    2️⃣ Product launch
+    3️⃣ Partnership / integration
+outro: |
+  Got it. Let’s dive in.
+max_turns: 3
+categories:
+  funding:
+    label: "Funding round"
+    options: ["1","fund","funding","raise"]
+    flow: "pr_intake.yaml"
+  product:
+    label: "Product launch"
+    options: ["2","product","launch","feature"]
+    flow: "product_launch.yaml"
+  partnership:
+    label: "Partnership / integration"
+    options: ["3","partner","partnership","integration"]
+    flow: "partnership.yaml"
