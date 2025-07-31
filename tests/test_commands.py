@@ -1,4 +1,3 @@
-
 """Tests for command handling functionality."""
 
 from app.commands import maybe_command

@@ -19,10 +19,10 @@ def twiml(text: str) -> Response:
 
 def clean_message(raw: str) -> Optional[str]:
     """Clean and validate incoming message text.
-    
+
     Args:
         raw: The raw message text
-        
+
     Returns:
         Cleaned message text or None if invalid (too long, empty, etc.)
     """

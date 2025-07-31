@@ -1,4 +1,3 @@
-
 """Tests for message prefiltering functionality."""
 
 from app.prefilter import clean_message
