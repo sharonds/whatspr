@@ -1,9 +1,13 @@
 flow_id: pr_intake
-goal: "Collect facts for a funding press release"
+version: "2025-08-01"
+intro: |
+  🚀 Great news! I’ll collect just a few details to draft your press‑release.
+outro: |
+  ✅ Got everything—expect your draft in 24 h. Reply /status anytime.
 max_turns: 12
 slots:
   - id: announcement_type
-    ask: "What type of announcement is this?"
+    ask: "What type of announcement is this? (e.g., Funding, Product Launch)"
   - id: headline
     ask: "Do you have a headline in mind?"
   - id: key_facts
@@ -11,6 +15,6 @@ slots:
   - id: quotes
     ask: "Provide two short quotes—one from the CEO and one from an investor."
   - id: boilerplate
-    ask: "Share a one-paragraph company boilerplate."
+    ask: "Share a one‑paragraph company boilerplate."
   - id: media_contact
     ask: "Who is the media contact (name, email, phone)?"
