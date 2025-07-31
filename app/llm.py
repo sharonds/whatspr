@@ -1,13 +1,19 @@
 from openai import OpenAI
 from typing import Optional
 from .config import settings
+import httpx
 
 _client = None
 
 def get_client():
     global _client
     if _client is None:
-        _client = OpenAI(api_key=settings.openai_api_key)
+        # Create OpenAI client with compatible httpx configuration
+        httpx_client = httpx.Client()
+        _client = OpenAI(
+            api_key=settings.openai_api_key,
+            http_client=httpx_client
+        )
     return _client
 
 def rephrase_question(field: str, previous: Optional[str] = None) -> str:
@@ -25,4 +31,4 @@ def rephrase_question(field: str, previous: Optional[str] = None) -> str:
         messages=[{"role": "system", "content": system},
                   {"role": "user", "content": user}],
     )
-    return completion.choices[0].message.content.strip()
+    return completion.choices[0].message.content.strip() if completion.choices[0].message.content else ""
