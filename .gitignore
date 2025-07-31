@@ -5,3 +5,4 @@ env/
 .mypy_cache/
 whatspr.db
 .specstory/
+test-action*.md
