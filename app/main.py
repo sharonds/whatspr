@@ -19,7 +19,7 @@ from .config import settings
 configure_logging()
 log = logging.getLogger("whatspr")
 
-app = FastAPI(title="WhatsPR MVP – Bugfix: auto-close session")
+app = FastAPI(title="WhatsPR MVP – Fix reset & better logging")
 
 @app.on_event("startup")
 def _startup():
@@ -29,8 +29,23 @@ def _startup():
 def _plain(text: str) -> PlainTextResponse:
     return PlainTextResponse(text)
 
-def _force_new_session(phone: str):
-    from .models import SessionModel
+# --- helper functions -------------------------------------------------
+
+from .models import SessionModel
+
+RESET_KEYWORDS = {"reset", "new", "start"}
+
+def is_reset(text: str) -> bool:
+    clean = (
+        text.encode("ascii", "ignore")
+            .decode()
+            .lower()
+            .strip()
+            .split()[0]  # take first word only
+    )
+    return clean in RESET_KEYWORDS
+
+def force_new_session(phone: str) -> SessionModel:
     with Session(engine) as db:
         new = SessionModel(phone=phone)
         db.add(new)
@@ -38,7 +53,7 @@ def _force_new_session(phone: str):
         db.refresh(new)
         return new
 
-RESET_KEYWORDS = {"reset", "new", "start"}
+# ----------------------------------------------------------------------
 
 @app.post("/whatsapp")
 async def whatsapp_hook(request: Request):
@@ -52,15 +67,24 @@ async def whatsapp_hook(request: Request):
     if not sender:
         return _plain("No sender.")
 
-    # Manual reset handling
-    if body.lower() in RESET_KEYWORDS:
-        session = _force_new_session(sender)
-        return _plain("Starting a fresh press‑release intake. " +
-                      rephrase_question(settings.required_fields[0]))
+    # Debug log (PII‑safe)
+    log.info(
+        "incoming",
+        sid=msg_sid,
+        phone_last4=sender[-4:],
+        body_preview=body[:40],
+    )
+
+    if is_reset(body):
+        session = force_new_session(sender)
+        record_message_sid(session.id, msg_sid)  # store to avoid duplicates later
+        return _plain(
+            "Starting fresh! " + rephrase_question(settings.required_fields[0])
+        )
 
     session = get_or_create_session(sender)
 
-    # Dedup
+    # Dedup AFTER reset keyword check
     if not record_message_sid(session.id, msg_sid):
         return _plain("Duplicate ignored.")
 
@@ -74,7 +98,6 @@ async def whatsapp_hook(request: Request):
     next_field = next_unanswered_field(session.id)
 
     if next_field is None:
-        # Mark session closed
         with Session(engine) as db:
             session.completed = True
             db.add(session)
