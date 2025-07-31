@@ -1,36 +1,36 @@
-from openai import OpenAI
-from typing import Optional
+"""LLM utilities.
+
+If `settings.llm_enabled` is False or we lack an OpenAI key,
+`rephrase_question()` just returns the original prompt mapping.
+Otherwise it calls OpenAI to re‑phrase follow‑up questions.
+"""
+
+from typing import Tuple
+from .prompts import question_for
 from .config import settings
-import httpx
-
-_client = None
 
 
-def get_client():
-    global _client
-    if _client is None:
-        # Create OpenAI client with compatible httpx configuration
-        httpx_client = httpx.Client()
-        _client = OpenAI(api_key=settings.openai_api_key, http_client=httpx_client)
-    return _client
+def rephrase_question(field: str) -> str:
+    # Disabled or no key ➜ deterministic mapping
+    if not settings.llm_enabled or not settings.openai_api_key:
+        return question_for(field)
 
+    try:
+        from openai import OpenAI
 
-def rephrase_question(field: str, previous: Optional[str] = None) -> str:
-    client = get_client()
-    system = "You are a helpful PR strategist."
-    user = (
-        f"We still need the value for '{field.replace('_', ' ')}'. "
-        "Write a single, friendly question—max 15 words."
-    )
-    if previous:
-        user += f" Previous answer was: \"{previous}\"."
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        temperature=0.3,
-        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-    )
-    return (
-        completion.choices[0].message.content.strip()
-        if completion.choices[0].message.content
-        else ""
-    )
+        client = OpenAI(api_key=settings.openai_api_key)
+
+        user_msg = (
+            "Rewrite the following prompt into a friendly, single-sentence question "
+            "with at most 20 words: " + question_for(field)
+        )
+        res = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            temperature=0.7,
+            messages=[{"role": "user", "content": user_msg}],
+            timeout=6,
+        )
+        return res.choices[0].message.content.strip()
+    except Exception as e:
+        # Fall back on any error
+        return question_for(field)

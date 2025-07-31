@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import Response
 import structlog
 from sqlmodel import Session
+
 from twilio.twiml.messaging_response import MessagingResponse
 
 from .logging_config import configure_logging
@@ -17,30 +18,27 @@ from .router import (
 )
 from .security import ensure_twilio
 from .prompts import question_for
+from .llm import rephrase_question
 
 configure_logging()
 log = structlog.get_logger("main")
 
-app = FastAPI(title="WhatsPR – Day‑1 stable")
+app = FastAPI(title="WhatsPR – Day-1 + LLM flag")
 app.add_middleware(RequestLogMiddleware)
 
 RESET_WORDS = {"reset", "new", "start"}
+
+
+def twiml(text: str) -> Response:
+    resp = MessagingResponse()
+    resp.message(text)
+    return Response(str(resp), media_type="application/xml")
 
 
 @app.on_event("startup")
 def _startup():
     init_db()
     log.info("db_ready")
-
-
-def _plain(text: str):
-    return PlainTextResponse(text)
-
-
-def twiml_message(text: str) -> Response:
-    resp = MessagingResponse()
-    resp.message(text)
-    return Response(str(resp), media_type="application/xml")
 
 
 def _force_new_session(phone: str) -> SessionModel:
@@ -61,22 +59,23 @@ async def whatsapp(request: Request):
     sid = form.get("MessageSid", "")
 
     if not phone:
-        return twiml_message("No phone.")
+        return twiml("")
 
     # reset keyword
     if body.lower().split()[0] in RESET_WORDS:
         session = _force_new_session(phone)
         record_message_sid(session.id, sid)
         first_field = settings.required_fields[0]
-        return twiml_message("Starting fresh – " + question_for(first_field))
+        q = rephrase_question(first_field)
+        return twiml("Starting fresh – " + q)
 
     session = get_or_create_session(phone)
 
     # dedup
     if not record_message_sid(session.id, sid):
-        return twiml_message("Duplicate ignored")
+        return twiml("")
 
-    # save answer for current field
+    # save answer
     ans_count = len(answered_fields(session.id))
     if ans_count < len(settings.required_fields):
         field = settings.required_fields[ans_count]
@@ -85,11 +84,10 @@ async def whatsapp(request: Request):
 
     next_field = next_unanswered_field(session.id)
     if next_field:
-        return twiml_message(question_for(next_field))
+        return twiml(rephrase_question(next_field))
     else:
-        # mark complete
         with Session(engine) as db:
             session.completed = True
             db.add(session)
             db.commit()
-        return twiml_message("Great, that's everything. We'll draft your press release soon.")
+        return twiml("Great, that's everything. We'll draft your press release soon.")
