@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from sqlmodel import SQLModel, Field, create_engine, Relationship
 from datetime import datetime
 
@@ -7,11 +7,11 @@ engine = create_engine("sqlite:///./whatspr.db", echo=False)
 
 class Company(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str | None = None
-    boilerplate: str | None = None
-    media_email: str | None = None
-    media_phone: str | None = None
-    founders: list["Founder"] = Relationship(back_populates="company")
+    name: Optional[str] = None
+    boilerplate: Optional[str] = None
+    media_email: Optional[str] = None
+    media_phone: Optional[str] = None
+    founders: List["Founder"] = Relationship(back_populates="company")
 
 
 class Founder(SQLModel, table=True):
