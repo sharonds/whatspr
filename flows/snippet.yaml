@@ -1,0 +1,10 @@
+slots:
+  - id: headline
+    ask: "Headline?"
+    validator: {type: min_len, min_len: 20, max_retries: 1}
+  - id: funding_amount
+    ask: "How much was raised?"
+    validator: {type: money, max_retries: 1}
+  - id: media_contact
+    ask: "Media contact?"
+    validator: {type: email_phone, max_retries: 1}
