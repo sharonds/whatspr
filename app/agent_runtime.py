@@ -24,7 +24,7 @@ log = logging.getLogger("whatspr.agent")
 # ---------- one-time init ----------
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
-PROMPT = Path("prompts/assistant.txt").read_text().strip()
+PROMPT = Path("prompts/assistant_v2.txt").read_text().strip()
 
 # The assistant is created once; its ID is cached in a file so you don't
 # recreate it every deploy (which would blow up #assistants quickly).
