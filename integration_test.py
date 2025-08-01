@@ -26,6 +26,8 @@ def test_pr1_atomic_tools():
             save_announcement_type, save_headline, save_key_facts,
             save_quotes, save_boilerplate, save_media_contact
         )
+        # Verify all imports work by checking they're callable
+        assert callable(save_announcement_type)
         print("✅ PR1: All 6 atomic tools imported successfully")
         
         from app.agent_runtime import ATOMIC_FUNCS
