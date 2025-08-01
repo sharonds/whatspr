@@ -33,12 +33,13 @@ _ASSISTANT_STAGING_CACHE = Path(".assistant_id.staging")
 
 ATOMIC_FUNCS = [
     "save_announcement_type",
-    "save_headline", 
+    "save_headline",
     "save_key_facts",
     "save_quotes",
     "save_boilerplate",
     "save_media_contact",
 ]
+
 
 def _get_or_create_assistant() -> str:
     # First, try to read from .assistant_id.staging
@@ -46,11 +47,13 @@ def _get_or_create_assistant() -> str:
         if _ASSISTANT_STAGING_CACHE.exists():
             assistant_id = _ASSISTANT_STAGING_CACHE.read_text().strip()
             if assistant_id:
-                log.info(f"Using staging assistant ID from {_ASSISTANT_STAGING_CACHE}: {assistant_id}")
+                log.info(
+                    f"Using staging assistant ID from {_ASSISTANT_STAGING_CACHE}: {assistant_id}"
+                )
                 return assistant_id
     except Exception as e:
         log.warning(f"Failed to read staging assistant ID: {e}")
-    
+
     # Fall back to regular .assistant_id
     if _ASSISTANT_CACHE.exists():
         return _ASSISTANT_CACHE.read_text().strip()

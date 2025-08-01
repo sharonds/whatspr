@@ -4,6 +4,7 @@ Run once after merging PR 3.
 
 Requires env var OPENAI_API_KEY.
 """
+
 import time, os, json
 from openai import OpenAI
 from pathlib import Path

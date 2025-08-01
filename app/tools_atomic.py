@@ -1,4 +1,3 @@
-
 """Atomic tool definitions for WhatsPR.
 
 Each tool saves a specific slot directly to the database (or any persistence backend).
@@ -13,6 +12,7 @@ import os
 try:
     from sqlmodel import Session, select
     from .models import Answer, engine
+
     DB_AVAILABLE = True
 except ImportError:
     DB_AVAILABLE = False
@@ -25,7 +25,7 @@ def get_db_session():
     if not DB_AVAILABLE:
         yield None
         return
-        
+
     session = Session(engine)
     try:
         yield session
@@ -43,43 +43,36 @@ def _save(slot: str, value: str, session_id: Optional[int] = None) -> str:
         # Fallback to debug mode if database not available
         print(f"[DEBUG] Saved {slot} -> {value[:50]}...")
         return f"{slot} saved (debug mode)."
-    
+
     try:
         # For staging/testing, use a default session ID if none provided
         # In production, this should come from the conversation context
         if session_id is None:
             session_id = int(os.environ.get('DEFAULT_SESSION_ID', '1'))
-        
+
         with get_db_session() as db:
             if db is None:
                 raise Exception("Database session not available")
-                
+
             # Check if this field already exists for this session
-            statement = select(Answer).where(
-                Answer.session_id == session_id,
-                Answer.field == slot
-            )
+            statement = select(Answer).where(Answer.session_id == session_id, Answer.field == slot)
             existing = db.exec(statement).first()
-            
+
             if existing:
                 # Update existing answer
                 existing.value = value
                 action = "updated"
             else:
                 # Create new answer
-                answer = Answer(
-                    session_id=session_id,
-                    field=slot,
-                    value=value
-                )
+                answer = Answer(session_id=session_id, field=slot, value=value)
                 db.add(answer)
                 action = "saved"
-            
+
             # Keep debug print for development visibility
             print(f"[DB] {action.title()} {slot} -> {value[:50]}...")
-            
+
         return f"{slot} {action}."
-        
+
     except Exception as e:
         # Fallback to debug mode if database fails
         print(f"[ERROR] Database save failed for {slot}: {e}")
