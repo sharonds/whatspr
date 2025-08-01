@@ -46,25 +46,39 @@ async def agent_hook(request: Request):
     clean = clean_message(body)
     if clean is None:
         return twiml("Please send text.")
+
+    # Handle reset commands
+    if clean.lower() in ["reset", "restart", "start over", "menu", "start"]:
+        log.info("session_reset", phone_hash=phone[-4:] if phone else "none")
+        if phone in _sessions:
+            del _sessions[phone]
+        thread_id = create_thread()
+        _sessions[phone] = thread_id
+        return twiml(
+            "👋 Hi! Pick the kind of announcement:\n  1️⃣ Funding round\n  2️⃣ Product launch\n  3️⃣ Partnership / integration"
+        )
+
     thread_id = _sessions.get(phone)
     if not thread_id:
         thread_id = create_thread()
         _sessions[phone] = thread_id
     try:
+        log.info(
+            "debug_request", phone_hash=phone[-4:] if phone else "none", body_length=len(clean)
+        )
         reply, tool_calls = run_thread(thread_id, clean)
+        log.info("debug_response", reply_length=len(reply), tool_count=len(tool_calls))
 
         # Handle tool calls using dispatch table
         for call in tool_calls:
             if call["name"] in TOOL_DISPATCH:
                 result = TOOL_DISPATCH[call["name"]](**call["arguments"])
-                log.info(
-                    "tool_result", name=call["name"], arguments=call["arguments"], result=result
-                )
+                log.info("tool_executed", name=call["name"])
             else:
                 log.warning("unknown_tool", name=call["name"])
 
     except Exception as e:
-        log.error("agent_error", error=str(e))
+        log.error("agent_error", error=str(e), error_type=type(e).__name__, exc_info=True)
         return twiml("Oops, temporary error. Try again.")
     return twiml(reply)
 
