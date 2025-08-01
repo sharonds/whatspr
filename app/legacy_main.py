@@ -6,8 +6,7 @@ from sqlmodel import Session
 from twilio.twiml.messaging_response import MessagingResponse
 
 from .logging_config import configure_logging
-from .middleware import RequestLogMiddleware
-from .models import init_db, engine, SessionModel
+from .models import engine, SessionModel
 from .config import settings
 from .router import (
     get_or_create_session,
@@ -17,7 +16,6 @@ from .router import (
     record_message_sid,
 )
 from .security import ensure_twilio
-from .prompts import question_for
 from .llm import rephrase_question
 from .commands import maybe_command
 from .prefilter import clean_message

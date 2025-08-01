@@ -1,0 +1,59 @@
+### Press Release Flow Test
+# Test the press release intake flow with the staging assistant
+
+@host = http://localhost:{{port}}
+@phone = +1234567890
+
+### 1. Start conversation
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=I want to create a press release
+
+### 2. Provide announcement type
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=This is a funding announcement
+
+### 3. Provide headline
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=TechCorp Raises $10M Series A to Transform Business Operations
+
+### 4. Provide key facts
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=Company: TechCorp, Amount: $10 million, Date: Today, Lead Investor: Venture Partners, Use of funds: Product development and market expansion
+
+### 5. Provide quotes
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=CEO John Smith: "We're thrilled to have Venture Partners leading our Series A round." Investor Jane Doe: "TechCorp's innovative approach to business automation made this an easy investment decision."
+
+### 6. Provide boilerplate
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=TechCorp is a leading technology company specializing in AI-powered business automation solutions. Founded in 2020, the company serves over 500 enterprise clients worldwide.
+
+### 7. Provide media contact
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=Sarah Johnson, sarah@techcorp.com, 555-123-4567
+
+### 8. Confirm completion
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=OK
+
+### 9. Reset session
+POST {{host}}/agent
+Content-Type: application/x-www-form-urlencoded
+
+From={{phone}}&Body=reset

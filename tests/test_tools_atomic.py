@@ -4,7 +4,7 @@
 Run with:  pytest -q
 """
 
-import importlib, inspect
+import importlib
 
 tools = importlib.import_module("app.tools_atomic")
 

@@ -13,11 +13,10 @@ import time
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, Optional
+from typing import Any, Dict, List, Tuple, Optional
 
 from openai import OpenAI
 from openai.types.beta import Thread, Assistant
-from openai.types.beta.threads import Message
 
 log = logging.getLogger("whatspr.agent")
 

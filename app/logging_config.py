@@ -1,4 +1,6 @@
-import logging, structlog, sys
+import logging
+import structlog
+import sys
 
 
 def scrub_pii(logger, _, event):

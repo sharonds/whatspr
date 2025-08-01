@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import Response
-from .agent_runtime import create_thread, run_thread, ATOMIC_FUNCS
+from .agent_runtime import run_thread, ATOMIC_FUNCS
 from .prefilter import clean_message, twiml
 from .validator_tool import validate_local
 from . import tools_atomic as tools
 import structlog
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional
 
 router = APIRouter()
 log = structlog.get_logger("agent")

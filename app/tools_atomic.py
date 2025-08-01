@@ -7,7 +7,6 @@ Replace the stub `TODO` with real persistence logic.
 All tools return a short confirmation string so the Assistant can echo success if needed.
 """
 
-from typing import Any
 
 # In real code, import your DB/session layer:
 # from .models import save_answer_to_db
