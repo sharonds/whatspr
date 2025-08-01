@@ -5,7 +5,6 @@ If `settings.llm_enabled` is False or we lack an OpenAI key,
 Otherwise it calls OpenAI to re‑phrase follow‑up questions.
 """
 
-from typing import Tuple
 from .prompts import question_for
 from .config import settings
 
@@ -31,6 +30,6 @@ def rephrase_question(field: str) -> str:
             timeout=6,
         )
         return res.choices[0].message.content.strip()
-    except Exception as e:
+    except Exception:
         # Fall back on any error
         return question_for(field)

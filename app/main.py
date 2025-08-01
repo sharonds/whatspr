@@ -1,5 +1,4 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import Response
+from fastapi import FastAPI
 import os
 import structlog
 from dotenv import load_dotenv
@@ -7,11 +6,7 @@ from dotenv import load_dotenv
 # Load environment variables first
 load_dotenv()
 
-from .commands import maybe_command
-from .prefilter import clean_message, twiml
-from .company_models import Founder
-from sqlmodel import Session
-from .models import engine, init_db
+from .models import init_db
 from .logging_config import configure_logging
 from .middleware import RequestLogMiddleware
 

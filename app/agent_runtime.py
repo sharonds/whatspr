@@ -13,25 +13,48 @@ import time
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, Optional
+from typing import Any, Dict, List, Tuple, Optional
 
 from openai import OpenAI
 from openai.types.beta import Thread, Assistant
-from openai.types.beta.threads import Message
 
 log = logging.getLogger("whatspr.agent")
 
 # ---------- one-time init ----------
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
-PROMPT = Path("prompts/assistant.txt").read_text().strip()
+PROMPT = Path("prompts/assistant_v2.txt").read_text().strip()
 
 # The assistant is created once; its ID is cached in a file so you don't
 # recreate it every deploy (which would blow up #assistants quickly).
 _ASSISTANT_CACHE = Path(".assistant_id")
+_ASSISTANT_STAGING_CACHE = Path(".assistant_id.staging")
+
+
+ATOMIC_FUNCS = [
+    "save_announcement_type",
+    "save_headline",
+    "save_key_facts",
+    "save_quotes",
+    "save_boilerplate",
+    "save_media_contact",
+]
 
 
 def _get_or_create_assistant() -> str:
+    # First, try to read from .assistant_id.staging
+    try:
+        if _ASSISTANT_STAGING_CACHE.exists():
+            assistant_id = _ASSISTANT_STAGING_CACHE.read_text().strip()
+            if assistant_id:
+                log.info(
+                    f"Using staging assistant ID from {_ASSISTANT_STAGING_CACHE}: {assistant_id}"
+                )
+                return assistant_id
+    except Exception as e:
+        log.warning(f"Failed to read staging assistant ID: {e}")
+
+    # Fall back to regular .assistant_id
     if _ASSISTANT_CACHE.exists():
         return _ASSISTANT_CACHE.read_text().strip()
 
@@ -86,6 +109,20 @@ def _get_or_create_assistant() -> str:
                     },
                 },
             },
+            *[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": fn,
+                        "parameters": {
+                            "type": "object",
+                            "properties": {"value": {"type": "string"}},
+                            "required": ["value"],
+                        },
+                    },
+                }
+                for fn in ATOMIC_FUNCS
+            ],
         ],
     )
     _ASSISTANT_CACHE.write_text(assistant.id)
@@ -167,6 +204,11 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
                     tool_outputs.append(
                         {"tool_call_id": tool_call.id, "output": json.dumps({"status": "finished"})}
                     )
+                elif tool_call.function.name in ATOMIC_FUNCS:
+                    # Handle atomic tools - return success for now
+                    tool_outputs.append(
+                        {"tool_call_id": tool_call.id, "output": json.dumps({"status": "saved"})}
+                    )
 
             # Submit tool outputs
             if tool_outputs:
@@ -190,15 +232,8 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
         else "[No response]"
     )
 
-    # 5. collect tool call payloads (if any)
+    # 5. collect tool call payloads (if any) - for now return empty
+    # Tool handling is done internally in the polling loop above
     tools: List[Dict[str, Any]] = []
-    for m in msgs.data:
-        if m.role == "tool":
-            tools.append(
-                {
-                    "name": m.content[0].tool_call.name,
-                    "arguments": json.loads(m.content[0].tool_call.arguments or "{}"),
-                }
-            )
 
     return reply_text, thread_id, tools
