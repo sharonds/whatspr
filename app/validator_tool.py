@@ -30,7 +30,7 @@ def validate_local(name: str, value: str):
     if ok:
         RETRIES.pop(name, None)
         return {"accepted": True, "hint": ""}
-    
+
     # Only apply retry logic if we have slot config
     try:
         if settings.flow and 'slots' in settings.flow:
@@ -44,7 +44,7 @@ def validate_local(name: str, value: str):
             max_r = 1
     except (StopIteration, KeyError, TypeError):
         max_r = 1
-        
+
     RETRIES[name] = RETRIES.get(name, 0) + 1
     if RETRIES[name] >= max_r:
         return {"accepted": True, "hint": ""}
