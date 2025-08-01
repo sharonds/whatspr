@@ -1,4 +1,3 @@
-
 def fake_run_thread(thread_id, user_msg):
     """Mock agent that simulates the expected conversation flow"""
     if user_msg == "1":

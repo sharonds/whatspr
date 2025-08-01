@@ -1,5 +1,5 @@
-
 import structlog, io, logging
+
 
 class LogCapture:
     def __enter__(self):
