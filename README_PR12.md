@@ -24,6 +24,7 @@ This PR introduces an experimental agent endpoint that integrates with OpenAI's 
 - **Start Script** (`start_agent.py`): Custom startup with environment loading
 - **Assistant Prompt** (`prompts/assistant.txt`): WhatsPR agent prompt and instructions
 
+<<<<<<< HEAD
 ### ✅ Input Validation Tool
 - **Validators Module** (`app/validators.py`): Regex-based validation for money and email formats
 - **Validator Tool** (`app/validator_tool.py`): Integration tool callable by OpenAI Assistants
@@ -31,6 +32,8 @@ This PR introduces an experimental agent endpoint that integrates with OpenAI's 
 - **Validation Types**: Money format (`$3.5M`, `$1,000`) and email validation
 - **Test Coverage** (`tests/test_validators.py`): Comprehensive validation testing
 
+=======
+>>>>>>> origin/main
 ### 🧪 Testing
 - **Test Suite** (`tests/test_agent.py`): Basic test framework for agent functionality
 
@@ -43,9 +46,14 @@ This PR introduces an experimental agent endpoint that integrates with OpenAI's 
 ### Assistant Configuration
 The agent uses a structured approach to collect press release information:
 - **Slots**: announcement_type, headline, key_facts, quotes, boilerplate, media_contact
+<<<<<<< HEAD
 - **Tools**: save_slot(), get_slot(), finish(), validate_local()
 - **Conversation Flow**: One question at a time, ≤20 words
 - **Validation**: Automatic input validation with helpful error messages
+=======
+- **Tools**: save_slot(), get_slot(), finish()
+- **Conversation Flow**: One question at a time, ≤20 words
+>>>>>>> origin/main
 
 ### Integration Points
 - Integrates with existing WhatsApp webhook infrastructure
