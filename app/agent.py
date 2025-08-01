@@ -49,7 +49,7 @@ def run_thread(thread_id: str, user_msg: str):
         ],
     )
     while run.status != "completed":
-        run = client.beta.threads.runs.retrieve(thread_id=run.thread_id, run_id=run.id)
+        run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
         if run.status in {"failed", "cancelled"}:
             raise RuntimeError(f"Run failed: {run.last_error}")
     msgs = client.beta.threads.messages.list(thread_id=thread_id)
