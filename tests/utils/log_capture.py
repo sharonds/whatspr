@@ -1,4 +1,5 @@
-import structlog, io, logging
+import io
+import logging
 
 
 class LogCapture:

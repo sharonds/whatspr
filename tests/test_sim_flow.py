@@ -1,4 +1,3 @@
-import pytest
 from tests.utils.sim_client import WhatsSim
 
 

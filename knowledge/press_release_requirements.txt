@@ -1,0 +1,22 @@
+# Press Release Requirements (v1)
+
+Below are the discrete pieces of information PR‑Bot must collect.  
+Each bullet can be referenced by its **Slot ID** when calling an atomic save_* tool.
+
+* **company_name** – The legal name of the organisation.  
+  _Example:_ “Acme AI Inc.”
+
+* **product_name** – Name of the product / service being announced.  
+  _Example:_ “Acme Generative Cloud”
+
+* **product_description** – 1‑paragraph overview of what the product does and whom it helps.
+
+* **key_features** – 3 or more bullet points of features + benefits.
+
+* **launch_date** – ISO date when the product or funding round is (or was) announced.
+
+* **funding_amount** – Amount raised, including currency (if applicable).
+
+* **spokesperson_quote** – A direct quote and attribution, e.g. “We’re thrilled …” — Jane Doe, CEO.
+
+* **media_contact** – Name • email • phone.

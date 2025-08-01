@@ -1,6 +1,6 @@
 from openai import OpenAI
 from pathlib import Path
-import json, logging, os
+import os
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 PROMPT = Path("prompts/assistant.txt").read_text()

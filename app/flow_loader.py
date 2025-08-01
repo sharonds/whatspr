@@ -1,4 +1,5 @@
-import yaml, jsonschema
+import yaml
+import jsonschema
 from pathlib import Path
 
 SCHEMA = {

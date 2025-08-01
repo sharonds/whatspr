@@ -1,5 +1,5 @@
 import re
-from typing import Union, Optional
+from typing import Union
 
 REGEXS = {
     "money": re.compile(r'^\$?\d[\d,\.]*\s?(?:[mk]|million)?$', re.I),
