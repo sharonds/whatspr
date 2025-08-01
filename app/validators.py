@@ -6,6 +6,7 @@ REGEXS = {
     "email_phone": re.compile(r'^.+@.+\..+.*\+?[0-9][0-9\-\s]{6,}$', re.I),
 }
 
+
 def validate(slot_id: str, value: str, rule: Union[str, dict, None] = None):
     """Return (accepted: bool, hint: str)"""
     if rule is None or rule == "free":
@@ -18,10 +19,10 @@ def validate(slot_id: str, value: str, rule: Union[str, dict, None] = None):
 
     if min_len and len(value) < min_len:
         return False, f"Answer must be at least {min_len} characters."
-    
+
     if rtype == "free" or rtype == "min_len":
         return True, ""
-        
+
     rx = REGEXS.get(rtype)
     if rx and rx.match(value.strip()):
         return True, ""
