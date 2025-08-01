@@ -3,6 +3,7 @@ env/
 *.sqlite3
 .env
 .env.staging
+.env.staging.local
 .mypy_cache/
 whatspr.db
 .specstory/
