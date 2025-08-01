@@ -59,7 +59,7 @@ async def agent_hook(request: Request):
 
     # Get thread_id (may be None for new sessions)
     thread_id = _sessions.get(phone)
-    
+
     try:
         log.info(
             "debug_request", phone_hash=phone[-4:] if phone else "none", body_length=len(clean)
