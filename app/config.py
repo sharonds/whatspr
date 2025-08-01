@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     twilio_auth_token: str
     openai_api_key: Optional[str] = None
     llm_enabled: bool = False  # 🔑 feature flag
+    adv_validation: bool = False  # 🔑 advanced validation feature flag
 
     # Legacy field list for backward compatibility
     required_fields: List[str] = [
