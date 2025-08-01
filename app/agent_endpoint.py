@@ -13,8 +13,8 @@ _sessions: dict[str, str] = {}  # phone -> thread_id
 @router.post("/agent")
 async def agent_hook(request: Request):
     form = await request.form()
-    phone = form.get("From", "")
-    body = form.get("Body", "")
+    phone = str(form.get("From", ""))
+    body = str(form.get("Body", ""))
     clean = clean_message(body)
     if clean is None:
         return twiml("Please send text.")
@@ -28,3 +28,9 @@ async def agent_hook(request: Request):
         log.error("agent_error", error=str(e))
         return twiml("Oops, temporary error. Try again.")
     return twiml(reply)
+
+
+@router.post("/whatsapp")
+async def whatsapp_hook(request: Request):
+    """Main WhatsApp endpoint when agent is default"""
+    return await agent_hook(request)
