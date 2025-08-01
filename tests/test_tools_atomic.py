@@ -16,4 +16,5 @@ def test_all_tools_present():
 def test_tool_returns_confirmation():
     fn = tools.save_headline
     msg = fn("Test headline")
-    assert "saved" in msg.lower()
+    # Should return either "saved" or "updated" depending on if record exists
+    assert any(word in msg.lower() for word in ["saved", "updated"])
