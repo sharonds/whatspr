@@ -340,16 +340,130 @@ grep -n "save_" app/tools_atomic.py
 head -5 prompts/assistant_v2.txt
 ```
 
-## 7. Sign-off Checklist
+## 7. Final Pre-Merge Checklist
+
+If you can answer "Yes" to all of the following questions, you are ready to merge.
+
+### 7.1 System Verification
+- [ ] **Did all System Health Checks pass?**
+  - This includes the full pytest suite and the specific verification scripts from section 1 of your test plan.
+  - All 27+ tests should pass without errors
+  - All 6 atomic tools should be registered correctly
+
+### 7.2 Functional Testing
+- [ ] **Did the "Happy Path" scenario execute perfectly?**
+  - Did the agent collect all information and call all the correct atomic tools in the logs as defined in section 2.1?
+  - Verify tool calls appear in server logs: `save_headline`, `save_company_name`, etc.
+  - Agent completes collection within 12 turns
+
+### 7.3 Edge Case Handling
+- [ ] **Were the "Edge Case" scenarios handled correctly?**
+  - Did the agent successfully use its knowledge file to answer questions about its requirements?
+  - Did the agent correctly handle user corrections?
+  - Agent references specific format requirements from knowledge file
+
+### 7.4 Production Readiness
+- [ ] **Have you addressed the TODO in the tools?**
+  - The `tools_atomic.py` file has a TODO to replace the debug print statement with a real database write
+  - Before merging to main, this should be implemented for production use
+  - Current: `print(f"[DEBUG] Saved {slot} -> {value[:50]}...")`
+  - Required: Actual database persistence
+
+### 7.5 Code Quality & Security
+- [ ] **No production secrets in repository**
+  - All `.env` files use placeholder values
+  - Actual API keys only in local environment or secure deployment
+- [ ] **Code passes linting standards**
+  - `ruff check app/ tests/` should show minimal issues
+- [ ] **All tests pass in clean environment**
+  - Fresh checkout should pass all tests
+
+## 8. Professional Merge Process
+
+⚠️ **Important**: You are currently on your staging branch. Do not merge directly on your local machine. The safest and most professional way to merge is by using a Pull Request (PR) on GitHub. This creates a formal record of the change and allows for a final review.
+
+### 8.1 Create Pull Request
+```bash
+# Ensure you're on the correct branch
+git branch --show-current
+
+# Push any final changes
+git push origin feat/atomic-tools-clean
+
+# Create PR at: https://github.com/sharonds/whatspr/compare/main...feat/atomic-tools-clean
+```
+
+### 8.2 PR Description Template
+```markdown
+## Summary
+Complete implementation of atomic tools, goal-oriented prompts, and File Search knowledge for WhatsPR agent.
+
+## Changes
+- ✅ PR1: Atomic Tools - 6 specific save functions replace generic save_slot
+- ✅ PR2: Goal-Oriented Prompt - Natural conversation flow with assistant_v2.txt
+- ✅ PR3: File Search Knowledge - External knowledge base for requirements
+
+## Testing
+- [ ] All 27+ pytest tests pass
+- [ ] Happy path scenario executed successfully
+- [ ] Edge cases (corrections, knowledge queries) handled correctly
+- [ ] Cache verification ensures latest code
+
+## Production Notes
+- ⚠️ TODO: Replace debug prints with real database writes in tools_atomic.py
+- ✅ Staging environment properly isolated
+- ✅ No production secrets in repository
+
+## Files Changed
+- `app/tools_atomic.py` - 6 atomic save functions
+- `app/agent_runtime.py` - Tool registration and v2 prompt
+- `prompts/assistant_v2.txt` - Conversational mission prompt
+- `knowledge/press_release_requirements.txt` - External knowledge base
+- `tests/` - Comprehensive test coverage
+```
+
+### 8.3 Merge Workflow
+1. **Create PR** on GitHub
+2. **Request review** from team members
+3. **Run CI/CD** checks if configured
+4. **Address feedback** if any
+5. **Merge via GitHub UI** (Squash and merge recommended)
+6. **Delete feature branch** after successful merge
+
+## 9. Post-Merge Tasks
+
+After successful merge to main:
+
+### 9.1 Production Deployment
+- [ ] Update production assistant to use File Search capability
+- [ ] Deploy with production API keys
+- [ ] Monitor initial production conversations
+
+### 9.2 Cleanup
+- [ ] Delete local feature branch: `git branch -d feat/atomic-tools-clean`
+- [ ] Update local main: `git checkout main && git pull origin main`
+
+### 9.3 Documentation
+- [ ] Update README.md with new features
+- [ ] Document File Search knowledge base maintenance
+- [ ] Update deployment procedures if needed
+
+## 10. Sign-off Checklist
+
+## 10. Sign-off Checklist
 
 Before marking the implementation as complete:
 
 1. [ ] All system health checks pass
-2. [ ] Happy path scenario completes successfully
+2. [ ] Happy path scenario completes successfully  
 3. [ ] Edge cases handled appropriately
 4. [ ] All success criteria met for PR1, PR2, and PR3
 5. [ ] Performance metrics within acceptable ranges
 6. [ ] No regressions in existing functionality
+7. [ ] **Pre-merge checklist completed (Section 7)**
+8. [ ] **Pull Request created with proper documentation**
+9. [ ] **Team review requested**
+10. [ ] **Production TODO items identified and tracked**
 
 ---
 
@@ -357,3 +471,25 @@ Before marking the implementation as complete:
 **Tested By**: ________________  
 **Test Result**: [ ] PASS [ ] FAIL  
 **Notes**: ________________
+
+---
+
+## Appendix: Current Implementation Status
+
+As of the latest commit (`db54527`):
+
+### ✅ **Completed Features**
+- **PR1 (Atomic Tools)**: 6 atomic save functions implemented and registered
+- **PR2 (Goal-Oriented Prompt)**: Natural conversation with assistant_v2.txt  
+- **PR3 (File Search Knowledge)**: External knowledge base integrated
+- **Testing Framework**: 27+ comprehensive tests
+- **Code Quality**: Ruff linting applied, clean git history
+- **Security**: Production secrets excluded from repository
+
+### ⚠️ **Known TODOs**
+- **Database Persistence**: Replace debug prints with real database writes in `tools_atomic.py`
+- **Production Assistant**: Update production assistant to use File Search capability
+- **Documentation**: Update README.md with new File Search features
+
+### 🎯 **Ready for Production**
+The staging environment successfully demonstrates all three PR features working together. The implementation is ready for team review and production deployment after addressing the database persistence TODO.
