@@ -3,7 +3,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 import os
 import structlog
-from .agent_endpoint import router as agent_router
+from dotenv import load_dotenv
+
+# Load environment variables first
+load_dotenv()
+
 from .commands import maybe_command
 from .prefilter import clean_message, twiml
 from .company_models import Founder
@@ -30,4 +34,5 @@ if LEGACY:
     from .legacy_main import router as legacy_router
     app.include_router(legacy_router, prefix="")
 else:
+    from .agent_endpoint import router as agent_router
     app.include_router(agent_router, prefix="")

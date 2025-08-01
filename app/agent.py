@@ -7,14 +7,15 @@ PROMPT = Path("prompts/assistant.txt").read_text()
 
 
 def create_thread():
-    return client.beta.threads.create()
+    thread = client.beta.threads.create()
+    return thread.id
 
 
 def run_thread(thread_id: str, user_msg: str):
     client.beta.threads.messages.create(thread_id, role="user", content=user_msg)
     run = client.beta.threads.runs.create(
-        thread_id,
-        assistant="whatspr-agent",
+        thread_id=thread_id,
+        assistant_id="asst_5MmNyeVDUeYi3RnbX0jCuSpU",
         instructions=PROMPT,
         tools=[
             {
@@ -46,6 +47,6 @@ def run_thread(thread_id: str, user_msg: str):
         ],
     )
     while run.status != "completed":
-        run = client.beta.threads.runs.retrieve(run.thread_id, run.id)
-    msgs = client.beta.threads.messages.list(thread_id)
-    return msgs.data[0].content[0].text.value
+        run = client.beta.threads.runs.retrieve(thread_id=run.thread_id, run_id=run.id)
+    msgs = client.beta.threads.messages.list(thread_id=thread_id)
+    return msgs.data[0].content[0].text.value if hasattr(msgs.data[0].content[0], 'text') else str(msgs.data[0].content[0])
