@@ -1,6 +1,7 @@
 from tests.utils.sim_client import WhatsSim
 import pytest
 from app import agent_endpoint
+from app.agent_runtime import run_thread as original_run_thread
 
 # Monkeypatch agent to avoid OpenAI call
 from tests.mock_agent import fake_run_thread
@@ -10,6 +11,8 @@ from tests.mock_agent import fake_run_thread
 def patch_agent(monkeypatch):
     # Patch the function in the agent_endpoint module where it's actually used
     monkeypatch.setattr(agent_endpoint, "run_thread", fake_run_thread)
+    # Also patch it in the original module as backup
+    monkeypatch.setattr("app.agent_runtime.run_thread", fake_run_thread)
 
 
 def test_menu_flow():
