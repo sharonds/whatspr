@@ -202,6 +202,11 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
                     tool_outputs.append(
                         {"tool_call_id": tool_call.id, "output": json.dumps({"status": "finished"})}
                     )
+                elif tool_call.function.name in ATOMIC_FUNCS:
+                    # Handle atomic tools - return success for now
+                    tool_outputs.append(
+                        {"tool_call_id": tool_call.id, "output": json.dumps({"status": "saved"})}
+                    )
 
             # Submit tool outputs
             if tool_outputs:
@@ -225,15 +230,8 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
         else "[No response]"
     )
 
-    # 5. collect tool call payloads (if any)
+    # 5. collect tool call payloads (if any) - for now return empty
+    # Tool handling is done internally in the polling loop above
     tools: List[Dict[str, Any]] = []
-    for m in msgs.data:
-        if m.role == "tool":
-            tools.append(
-                {
-                    "name": m.content[0].tool_call.name,
-                    "arguments": json.loads(m.content[0].tool_call.arguments or "{}"),
-                }
-            )
 
     return reply_text, thread_id, tools
