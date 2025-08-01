@@ -13,7 +13,7 @@ import time
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union, Optional
 
 from openai import OpenAI
 from openai.types.beta import Thread, Assistant
@@ -103,12 +103,17 @@ def create_thread() -> str:
     return thread.id
 
 
-def run_thread(thread_id: str, user_msg: str) -> Tuple[str, List[Dict[str, Any]]]:
+def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[Dict[str, Any]]]:
     """
-    Send user message, return assistant reply text **and** list of tool calls.
+    Send user message, return assistant reply text, thread_id, and list of tool calls.
+    If thread_id is None, creates a new thread lazily.
     Raises on permanent API error; handles polling / back-off.
     """
     from .validator_tool import validate_local
+
+    # Lazy thread creation - only create when actually needed
+    if thread_id is None:
+        thread_id = create_thread()
 
     # 1. append user message
     client.beta.threads.messages.create(
@@ -196,4 +201,4 @@ def run_thread(thread_id: str, user_msg: str) -> Tuple[str, List[Dict[str, Any]]
                 }
             )
 
-    return reply_text, tools
+    return reply_text, thread_id, tools
