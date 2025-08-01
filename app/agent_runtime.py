@@ -30,6 +30,7 @@ PROMPT = Path("prompts/assistant.txt").read_text().strip()
 # recreate it every deploy (which would blow up #assistants quickly).
 _ASSISTANT_CACHE = Path(".assistant_id")
 
+
 def _get_or_create_assistant() -> str:
     if _ASSISTANT_CACHE.exists():
         return _ASSISTANT_CACHE.read_text().strip()
@@ -95,6 +96,7 @@ ASSISTANT_ID = _get_or_create_assistant()
 
 # ---------- helper API ----------
 
+
 def create_thread() -> str:
     """Return *thread_id*"""
     thread: Thread = client.beta.threads.create()
@@ -107,7 +109,7 @@ def run_thread(thread_id: str, user_msg: str) -> Tuple[str, List[Dict[str, Any]]
     Raises on permanent API error; handles polling / back-off.
     """
     from .validator_tool import validate_local
-    
+
     # 1. append user message
     client.beta.threads.messages.create(
         thread_id=thread_id,
@@ -120,18 +122,18 @@ def run_thread(thread_id: str, user_msg: str) -> Tuple[str, List[Dict[str, Any]]
         thread_id=thread_id,
         assistant_id=ASSISTANT_ID,
         # No instructions override: already baked into the assistant.
-        timeout=10,           # server-side request timeout
+        timeout=10,  # server-side request timeout
     )
 
     # 3. poll with exponential back-off and handle tool calls
     delay = 0.5
     max_attempts = 20  # Prevent infinite loops
     attempts = 0
-    
+
     while attempts < max_attempts:
         attempts += 1
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-        
+
         if run.status == "completed":
             break
         elif run.status in {"failed", "cancelled"}:
@@ -143,34 +145,28 @@ def run_thread(thread_id: str, user_msg: str) -> Tuple[str, List[Dict[str, Any]]
                 if tool_call.function.name == "validate_local":
                     args = json.loads(tool_call.function.arguments)
                     result = validate_local(args["name"], args["value"])
-                    tool_outputs.append({
-                        "tool_call_id": tool_call.id,
-                        "output": json.dumps(result)
-                    })
+                    tool_outputs.append(
+                        {"tool_call_id": tool_call.id, "output": json.dumps(result)}
+                    )
                 elif tool_call.function.name == "save_slot":
                     # Handle save_slot if needed
-                    tool_outputs.append({
-                        "tool_call_id": tool_call.id,
-                        "output": json.dumps({"status": "saved"})
-                    })
+                    tool_outputs.append(
+                        {"tool_call_id": tool_call.id, "output": json.dumps({"status": "saved"})}
+                    )
                 elif tool_call.function.name == "get_slot":
                     # Handle get_slot if needed
-                    tool_outputs.append({
-                        "tool_call_id": tool_call.id,
-                        "output": json.dumps({"value": ""})
-                    })
+                    tool_outputs.append(
+                        {"tool_call_id": tool_call.id, "output": json.dumps({"value": ""})}
+                    )
                 elif tool_call.function.name == "finish":
-                    tool_outputs.append({
-                        "tool_call_id": tool_call.id,
-                        "output": json.dumps({"status": "finished"})
-                    })
-            
+                    tool_outputs.append(
+                        {"tool_call_id": tool_call.id, "output": json.dumps({"status": "finished"})}
+                    )
+
             # Submit tool outputs
             if tool_outputs:
                 run = client.beta.threads.runs.submit_tool_outputs(
-                    thread_id=thread_id,
-                    run_id=run.id,
-                    tool_outputs=tool_outputs
+                    thread_id=thread_id, run_id=run.id, tool_outputs=tool_outputs
                 )
         else:
             # Still running, wait and try again
@@ -182,11 +178,11 @@ def run_thread(thread_id: str, user_msg: str) -> Tuple[str, List[Dict[str, Any]]
 
     # 4. fetch last assistant message (sorted by created_at desc)
     msgs = client.beta.threads.messages.list(thread_id=thread_id, limit=5)
-    assistant_msg = next(
-        (m for m in msgs.data if m.role == "assistant"), None
-    )
+    assistant_msg = next((m for m in msgs.data if m.role == "assistant"), None)
     reply_text = (
-        assistant_msg.content[0].text.value if assistant_msg and hasattr(assistant_msg.content[0], 'text') else "[No response]"
+        assistant_msg.content[0].text.value
+        if assistant_msg and hasattr(assistant_msg.content[0], 'text')
+        else "[No response]"
     )
 
     # 5. collect tool call payloads (if any)

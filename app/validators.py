@@ -2,9 +2,10 @@ import re
 from typing import Optional, Tuple
 
 REGEXS = {
-    "money": re.compile(r'^\$?\d[\d,\.]*[mk]?$' , re.I),
+    "money": re.compile(r'^\$?\d[\d,\.]*[mk]?$', re.I),
     "email": re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$'),
 }
+
 
 def validate(slot_id: str, value: str, rule: Optional[str] = None) -> Tuple[bool, str]:
     if not rule or rule == "free":

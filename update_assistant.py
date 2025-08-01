@@ -54,7 +54,10 @@ assistant = client.beta.assistants.update(
                     "properties": {
                         "name": {"type": "string", "description": "The field name being validated"},
                         "value": {"type": "string", "description": "The value to validate"},
-                        "rule": {"type": "string", "description": "The validation rule (email, money, free)"},
+                        "rule": {
+                            "type": "string",
+                            "description": "The validation rule (email, money, free)",
+                        },
                     },
                     "required": ["name", "value", "rule"],
                 },
@@ -68,4 +71,6 @@ assistant = client.beta.assistants.update(
 )
 
 print(f"Assistant updated: {assistant.id}")
-print(f"Tools: {[tool.function.name if hasattr(tool, 'function') else tool.type for tool in assistant.tools]}")
+print(
+    f"Tools: {[tool.function.name if hasattr(tool, 'function') else tool.type for tool in assistant.tools]}"
+)

@@ -10,21 +10,25 @@ log = structlog.get_logger("agent")
 
 _sessions: dict[str, str] = {}  # phone -> thread_id
 
+
 # Tool dispatch table for cleaner handling
 def save_slot_fn(name: str, value: str) -> dict:
     """Save a slot value (placeholder implementation)"""
     log.info("save_slot", name=name, value=value)
     return {"status": "saved", "name": name, "value": value}
 
+
 def get_slot_fn(name: str) -> dict:
     """Get a slot value (placeholder implementation)"""
     log.info("get_slot", name=name)
     return {"value": "", "name": name}
 
+
 def finish_fn() -> dict:
     """Finish the conversation (placeholder implementation)"""
     log.info("finish")
     return {"status": "finished"}
+
 
 TOOL_DISPATCH = {
     "save_slot": save_slot_fn,
@@ -48,15 +52,17 @@ async def agent_hook(request: Request):
         _sessions[phone] = thread_id
     try:
         reply, tool_calls = run_thread(thread_id, clean)
-        
+
         # Handle tool calls using dispatch table
         for call in tool_calls:
             if call["name"] in TOOL_DISPATCH:
                 result = TOOL_DISPATCH[call["name"]](**call["arguments"])
-                log.info("tool_result", name=call["name"], arguments=call["arguments"], result=result)
+                log.info(
+                    "tool_result", name=call["name"], arguments=call["arguments"], result=result
+                )
             else:
                 log.warning("unknown_tool", name=call["name"])
-        
+
     except Exception as e:
         log.error("agent_error", error=str(e))
         return twiml("Oops, temporary error. Try again.")
