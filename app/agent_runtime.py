@@ -29,9 +29,21 @@ PROMPT = Path("prompts/assistant.txt").read_text().strip()
 # The assistant is created once; its ID is cached in a file so you don't
 # recreate it every deploy (which would blow up #assistants quickly).
 _ASSISTANT_CACHE = Path(".assistant_id")
+_ASSISTANT_STAGING_CACHE = Path(".assistant_id.staging")
 
 
 def _get_or_create_assistant() -> str:
+    # First, try to read from .assistant_id.staging
+    try:
+        if _ASSISTANT_STAGING_CACHE.exists():
+            assistant_id = _ASSISTANT_STAGING_CACHE.read_text().strip()
+            if assistant_id:
+                log.info(f"Using staging assistant ID from {_ASSISTANT_STAGING_CACHE}: {assistant_id}")
+                return assistant_id
+    except Exception as e:
+        log.warning(f"Failed to read staging assistant ID: {e}")
+    
+    # Fall back to regular .assistant_id
     if _ASSISTANT_CACHE.exists():
         return _ASSISTANT_CACHE.read_text().strip()
 
