@@ -51,18 +51,15 @@ async def agent_hook(request: Request):
     # Handle reset commands
     if clean.lower() in ["reset", "restart", "start over", "menu", "start"]:
         log.info("session_reset", phone_hash=phone[-4:] if phone else "none")
-        if phone in _sessions:
-            del _sessions[phone]
-        # Don't create thread immediately - use lazy creation
+        # Clear session, thread will be created lazily when needed
         _sessions[phone] = None
         return twiml(
             "👋 Hi! Pick the kind of announcement:\n  1️⃣ Funding round\n  2️⃣ Product launch\n  3️⃣ Partnership / integration"
         )
 
+    # Get thread_id (may be None for new sessions)
     thread_id = _sessions.get(phone)
-    if not thread_id:
-        thread_id = create_thread()
-        _sessions[phone] = thread_id
+    
     try:
         log.info(
             "debug_request", phone_hash=phone[-4:] if phone else "none", body_length=len(clean)
