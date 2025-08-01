@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
-from .agent_runtime import create_thread, run_thread
+from .agent_runtime import create_thread, run_thread, ATOMIC_FUNCS
 from .prefilter import clean_message, twiml
 from .validator_tool import validate_local
+from . import tools_atomic as tools
 import structlog
 from typing import Dict, Optional, List, Any
 
@@ -36,6 +37,7 @@ TOOL_DISPATCH = {
     "get_slot": get_slot_fn,
     "validate_local": validate_local,
     "finish": finish_fn,
+    **{fn: getattr(tools, fn) for fn in ATOMIC_FUNCS},
 }
 
 

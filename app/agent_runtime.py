@@ -32,6 +32,15 @@ _ASSISTANT_CACHE = Path(".assistant_id")
 _ASSISTANT_STAGING_CACHE = Path(".assistant_id.staging")
 
 
+ATOMIC_FUNCS = [
+    "save_announcement_type",
+    "save_headline", 
+    "save_key_facts",
+    "save_quotes",
+    "save_boilerplate",
+    "save_media_contact",
+]
+
 def _get_or_create_assistant() -> str:
     # First, try to read from .assistant_id.staging
     try:
@@ -98,6 +107,20 @@ def _get_or_create_assistant() -> str:
                     },
                 },
             },
+            *[
+                {
+                    "type": "function",
+                    "function": {
+                        "name": fn,
+                        "parameters": {
+                            "type": "object",
+                            "properties": {"value": {"type": "string"}},
+                            "required": ["value"],
+                        },
+                    },
+                }
+                for fn in ATOMIC_FUNCS
+            ],
         ],
     )
     _ASSISTANT_CACHE.write_text(assistant.id)
