@@ -22,7 +22,7 @@ from openai.types.beta.threads import Message
 log = logging.getLogger("whatspr.agent")
 
 # ---------- one-time init ----------
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
 PROMPT = Path("prompts/assistant.txt").read_text().strip()
 
