@@ -33,15 +33,15 @@ async def run_single_attempt(
     thread_id: Optional[str], user_msg: str, timeout_seconds: float
 ) -> Tuple[str, str, List[dict]]:
     """Run a single AI processing attempt with timeout.
-    
+
     Args:
         thread_id: Optional thread ID for conversation continuation.
         user_msg: User message to process.
         timeout_seconds: Maximum time to wait for response.
-        
+
     Returns:
         Tuple of (reply, thread_id, tool_calls).
-        
+
     Raises:
         asyncio.TimeoutError: If the operation times out.
         Exception: If the operation fails for other reasons.
@@ -66,25 +66,27 @@ async def run_thread_with_retry(
     """
     start_time = time.time()
     last_exception = None
-    
+
     # Calculate per-attempt timeout (reserve time for retries)
     per_attempt_timeout = timeout_seconds / (MAX_RETRIES + 1)
-    
+
     for attempt in range(MAX_RETRIES + 1):  # 0, 1, 2 (3 total attempts)
         try:
             # Adjust timeout for remaining time
             remaining_time = timeout_seconds - (time.time() - start_time)
             attempt_timeout = min(per_attempt_timeout, remaining_time - 0.5)  # Leave 0.5s buffer
-            
+
             if attempt_timeout <= 0:
-                log.warning("insufficient_time_for_retry", attempt=attempt, remaining_time=remaining_time)
+                log.warning(
+                    "insufficient_time_for_retry", attempt=attempt, remaining_time=remaining_time
+                )
                 break
-                
+
             log.info(
-                "ai_attempt_start", 
-                attempt=attempt + 1, 
+                "ai_attempt_start",
+                attempt=attempt + 1,
                 max_attempts=MAX_RETRIES + 1,
-                attempt_timeout=attempt_timeout
+                attempt_timeout=attempt_timeout,
             )
 
             reply, thread_id, tool_calls = await run_single_attempt(
@@ -93,10 +95,10 @@ async def run_thread_with_retry(
 
             elapsed = time.time() - start_time
             log.info(
-                "ai_success", 
+                "ai_success",
                 attempt=attempt + 1,
-                elapsed_seconds=elapsed, 
-                timeout_seconds=timeout_seconds
+                elapsed_seconds=elapsed,
+                timeout_seconds=timeout_seconds,
             )
 
             return reply, thread_id, tool_calls
@@ -125,11 +127,8 @@ async def run_thread_with_retry(
         # Don't retry on the last attempt
         if attempt < MAX_RETRIES:
             # Calculate exponential backoff delay with jitter
-            delay = min(
-                RETRY_BASE_DELAY * (2 ** attempt) + random.uniform(0, 0.1),
-                RETRY_MAX_DELAY
-            )
-            
+            delay = min(RETRY_BASE_DELAY * (2**attempt) + random.uniform(0, 0.1), RETRY_MAX_DELAY)
+
             # Check if we have time for delay + another attempt
             remaining_time = timeout_seconds - (time.time() - start_time)
             if remaining_time > delay + 1.0:  # Need at least 1s for next attempt
@@ -152,6 +151,7 @@ async def run_thread_with_retry(
     # Create thread if needed but preserve existing thread_id on failure
     if thread_id is None:
         from .agent_runtime import create_thread
+
         thread_id = create_thread()
         log.info("thread_created_after_failure", thread_id=thread_id)
 
@@ -263,12 +263,16 @@ async def agent_hook(request: Request):
 
         # Use retry-enabled AI processing with timeout protection
         reply, thread_id, tool_calls = await run_thread_with_retry(thread_id, clean)
-        
+
         # Only update session if we have a valid thread_id
         if thread_id and thread_id.strip():
             _sessions[phone] = thread_id
         else:
-            log.error("invalid_thread_id_returned", thread_id=repr(thread_id), phone_hash=phone[-4:] if phone else "none")
+            log.error(
+                "invalid_thread_id_returned",
+                thread_id=repr(thread_id),
+                phone_hash=phone[-4:] if phone else "none",
+            )
 
         processing_time = time.time() - request_start_time
         log.info(
