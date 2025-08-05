@@ -6,9 +6,7 @@ from .config import settings
 
 def get_or_create_session(phone: str) -> SessionModel:
     with Session(engine) as db:
-        stmt = select(SessionModel).where(
-            SessionModel.phone == phone, SessionModel.completed == False
-        )
+        stmt = select(SessionModel).where(SessionModel.phone == phone, not SessionModel.completed)
         session = db.exec(stmt).first()
         if session:
             return session
@@ -36,8 +34,8 @@ def next_unanswered_field(session_id: int) -> Optional[str]:
     answered = set(answered_fields(session_id))
 
     # Use flow spec if available, otherwise fall back to legacy required_fields
-    if settings.flow and 'slots' in settings.flow:
-        field_list = [slot['id'] for slot in settings.flow['slots']]
+    if settings.flow and "slots" in settings.flow:
+        field_list = [slot["id"] for slot in settings.flow["slots"]]
     else:
         field_list = settings.required_fields
 

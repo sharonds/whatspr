@@ -193,21 +193,33 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
                 elif tool_call.function.name == "save_slot":
                     # Handle save_slot if needed
                     tool_outputs.append(
-                        {"tool_call_id": tool_call.id, "output": json.dumps({"status": "saved"})}
+                        {
+                            "tool_call_id": tool_call.id,
+                            "output": json.dumps({"status": "saved"}),
+                        }
                     )
                 elif tool_call.function.name == "get_slot":
                     # Handle get_slot if needed
                     tool_outputs.append(
-                        {"tool_call_id": tool_call.id, "output": json.dumps({"value": ""})}
+                        {
+                            "tool_call_id": tool_call.id,
+                            "output": json.dumps({"value": ""}),
+                        }
                     )
                 elif tool_call.function.name == "finish":
                     tool_outputs.append(
-                        {"tool_call_id": tool_call.id, "output": json.dumps({"status": "finished"})}
+                        {
+                            "tool_call_id": tool_call.id,
+                            "output": json.dumps({"status": "finished"}),
+                        }
                     )
                 elif tool_call.function.name in ATOMIC_FUNCS:
                     # Handle atomic tools - return success for now
                     tool_outputs.append(
-                        {"tool_call_id": tool_call.id, "output": json.dumps({"status": "saved"})}
+                        {
+                            "tool_call_id": tool_call.id,
+                            "output": json.dumps({"status": "saved"}),
+                        }
                     )
 
             # Submit tool outputs
@@ -228,7 +240,7 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     assistant_msg = next((m for m in msgs.data if m.role == "assistant"), None)
     reply_text = (
         assistant_msg.content[0].text.value
-        if assistant_msg and hasattr(assistant_msg.content[0], 'text')
+        if assistant_msg and hasattr(assistant_msg.content[0], "text")
         else "[No response]"
     )
 

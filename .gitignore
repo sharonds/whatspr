@@ -2,9 +2,16 @@ __pycache__/
 env/
 *.sqlite3
 .env
+.env.*
 .env.staging
 .env.staging.local
 .mypy_cache/
 whatspr.db
 .specstory/
 test-action*.md
+
+# Security - API keys and secrets
+*.key
+*.pem
+secrets.json
+config.json

@@ -1,4 +1,4 @@
-from app.security import validator
+from app.security import twilio_validator as validator
 
 
 def test_signature_helper():

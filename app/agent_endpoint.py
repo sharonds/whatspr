@@ -63,7 +63,9 @@ async def agent_hook(request: Request):
 
     try:
         log.info(
-            "debug_request", phone_hash=phone[-4:] if phone else "none", body_length=len(clean)
+            "debug_request",
+            phone_hash=phone[-4:] if phone else "none",
+            body_length=len(clean),
         )
         reply, thread_id, tool_calls = run_thread(thread_id, clean)
         _sessions[phone] = thread_id  # Update session with actual thread_id
@@ -73,7 +75,7 @@ async def agent_hook(request: Request):
         for call in tool_calls:
             call_dict = dict(call)  # Ensure proper dict type for type checker
             if call_dict.get("name") in TOOL_DISPATCH:
-                result = TOOL_DISPATCH[call_dict["name"]](**call_dict.get("arguments", {}))
+                TOOL_DISPATCH[call_dict["name"]](**call_dict.get("arguments", {}))
                 log.info("tool_executed", name=call_dict["name"])
             else:
                 log.warning("unknown_tool", name=call_dict.get("name", "unknown"))

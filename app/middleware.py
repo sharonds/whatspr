@@ -18,9 +18,17 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
             resp_text = getattr(resp, "body", b"")[:200]
             log.info("response_sample", id=rid, body=resp_text.decode(errors="ignore"))
             log.info(
-                "end", id=rid, status=resp.status_code, latency_ms=int((time.time() - start) * 1000)
+                "end",
+                id=rid,
+                status=resp.status_code,
+                latency_ms=int((time.time() - start) * 1000),
             )
             return resp
         except Exception as e:
-            log.error("error", id=rid, error=str(e), latency_ms=int((time.time() - start) * 1000))
+            log.error(
+                "error",
+                id=rid,
+                error=str(e),
+                latency_ms=int((time.time() - start) * 1000),
+            )
             raise
