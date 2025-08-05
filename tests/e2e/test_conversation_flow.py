@@ -22,22 +22,22 @@ class TestHappyPathConversation:
         # Mock the TOOL_DISPATCH to capture tool calls
         self.tool_dispatch_patcher = patch("app.agent_endpoint.TOOL_DISPATCH")
         self.mock_dispatch = self.tool_dispatch_patcher.start()
-        
+
         # Create mock functions for atomic tools
         self.atomic_tools = [
             "save_announcement_type",
-            "save_headline", 
+            "save_headline",
             "save_key_facts",
             "save_quotes",
             "save_boilerplate",
             "save_media_contact",
         ]
-        
+
         # Set up the mock dispatch table
         mock_dispatch_dict = {}
         for tool_name in self.atomic_tools:
             mock_dispatch_dict[tool_name] = self._create_mock_tool(tool_name)
-        
+
         self.mock_dispatch.update(mock_dispatch_dict)
         self.mock_dispatch.__contains__ = lambda name: name in mock_dispatch_dict
         self.mock_dispatch.__getitem__ = lambda name: mock_dispatch_dict[name]
@@ -48,9 +48,11 @@ class TestHappyPathConversation:
 
     def _create_mock_tool(self, tool_name):
         """Create a mock tool function that captures calls."""
+
         def mock_tool(*args, **kwargs):
             self.tool_calls.append({"tool": tool_name, "args": args, "kwargs": kwargs})
             return f"Successfully saved via {tool_name}"
+
         return mock_tool
 
     def _send_message(self, body):
@@ -178,9 +180,9 @@ class TestHappyPathConversation:
 
             elif call["tool"] == "save_quotes":
                 call_data = str(call["args"]) + str(call["kwargs"])
-                assert "jane smith" in call_data.lower() or "ceo" in call_data.lower(), (
-                    "Spokesperson quotes not properly captured"
-                )
+                assert (
+                    "jane smith" in call_data.lower() or "ceo" in call_data.lower()
+                ), "Spokesperson quotes not properly captured"
 
     def test_conversation_turn_limit(self):
         """Verify conversation completes within 12 turns as specified in acceptance criteria."""
