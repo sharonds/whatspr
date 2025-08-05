@@ -2,7 +2,7 @@
 
 FastAPI chatbot for WhatsApp using Twilio that creates press releases through conversational AI.
 
-**🆕 Latest Updates**: Complete code quality enforcement system with Google-style docstrings, automated formatting, comprehensive linting, and CI/CD pipeline integration.
+**🆕 Latest Updates**: OpenAI API connection reliability fix (resolved 50% failure rate) + Complete code quality enforcement system with Google-style docstrings, automated formatting, comprehensive linting, and CI/CD pipeline integration.
 
 ## 🚀 Features
 
@@ -82,6 +82,21 @@ grep -E "\.env$" .gitignore
 grep -r "sk-" . --exclude-dir=.git --exclude-dir=env || echo "✅ No keys found"
 ```
 
+### ⚠️ Environment Variables - Critical Requirements
+
+**IMPORTANT**: The `OPENAI_API_KEY` must be available before module import to prevent authentication failures.
+
+```bash
+# Required environment variables:
+OPENAI_API_KEY=sk-your-openai-key-here    # CRITICAL: Must be set before app starts
+TWILIO_AUTH_TOKEN=your-32-char-token       # Required for webhook verification
+
+# Verify API key is accessible:
+python -c "import os; print('✅ API key found' if os.environ.get('OPENAI_API_KEY') else '❌ API key missing')"
+```
+
+The application uses lazy initialization to handle environment variable loading, but proper setup prevents reliability issues.
+
 ## 🧪 Testing
 
 ### Test Suites Available
@@ -94,6 +109,22 @@ pytest tests/ -v
 pytest tests/test_tools_atomic.py -v      # Atomic tools functionality
 pytest tests/test_safety.py -v            # Security validations
 pytest tests/e2e/ -v                      # End-to-end conversation flows
+pytest tests/test_reliability.py -v       # OpenAI API reliability testing
+```
+
+### 🔧 Diagnostic Tools
+
+For troubleshooting connection and reliability issues:
+
+```bash
+# Quick diagnostic script (immediate insights)
+python test_diagnose.py
+
+# Comprehensive reliability testing
+pytest tests/test_reliability.py -v --tb=short
+
+# Check OpenAI API connection
+python -c "from app.agent_runtime import get_client; print('✅ API connection OK' if get_client().models.list() else '❌ Connection failed')"
 ```
 
 ### E2E Testing
@@ -147,10 +178,33 @@ All security-related events are logged with structured data:
 ### Production Checklist
 
 - [ ] **API Keys Rotated**: Never use development keys in production
-- [ ] **Environment Variables**: Use secure secrets management
+- [ ] **Environment Variables**: Use secure secrets management (OPENAI_API_KEY must be available at startup)
 - [ ] **Monitoring**: Set up alerts for security events and errors
 - [ ] **Rate Limits**: Configure appropriate limits for production load
 - [ ] **Backup**: Database backup strategy in place
+- [ ] **Reliability Testing**: Run `pytest tests/test_reliability.py` before deployment
+
+### 🚨 Troubleshooting Common Issues
+
+**50% Failure Rate / Authentication Errors:**
+```bash
+# 1. Check if API key is set correctly
+echo $OPENAI_API_KEY | head -c 10
+
+# 2. Remove stale assistant cache (forces recreation)
+rm -f .assistant_id .assistant_id.staging
+
+# 3. Run diagnostic script
+python test_diagnose.py
+
+# 4. Test API connection directly
+python -c "from app.agent_runtime import get_client; print(get_client().models.list().data[0].id)"
+```
+
+**Module Import Issues:**
+- Ensure `OPENAI_API_KEY` is in environment before importing `app.agent_runtime`
+- Use lazy initialization pattern for API clients
+- Check `.env` file is being loaded correctly
 
 ### Cloud Deployment
 
