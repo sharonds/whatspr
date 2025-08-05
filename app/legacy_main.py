@@ -61,9 +61,7 @@ async def whatsapp(request: Request):
 
     # Check if it's a command first
     current_session = get_or_create_session(phone)
-    next_field = (
-        next_unanswered_field(current_session.id) if current_session.id else None
-    )
+    next_field = next_unanswered_field(current_session.id) if current_session.id else None
     command_response = maybe_command(body, next_field)
     if command_response:
         return command_response
@@ -129,6 +127,4 @@ async def whatsapp(request: Request):
             session.completed = True
             db.add(session)
             db.commit()
-        return twiml(
-            "✅ Got everything—expect your draft in 24 h. Reply /status anytime."
-        )
+        return twiml("✅ Got everything—expect your draft in 24 h. Reply /status anytime.")

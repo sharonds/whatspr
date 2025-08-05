@@ -140,9 +140,7 @@ def create_thread() -> str:
     return thread.id
 
 
-def run_thread(
-    thread_id: Optional[str], user_msg: str
-) -> Tuple[str, str, List[Dict[str, Any]]]:
+def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[Dict[str, Any]]]:
     """
     Send user message, return assistant reply text, thread_id, and list of tool calls.
     If thread_id is None, creates a new thread lazily.

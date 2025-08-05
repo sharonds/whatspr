@@ -16,9 +16,7 @@ def has_valid_api_key():
     """Check if we have a valid OpenAI API key for testing."""
     api_key = os.environ.get("OPENAI_API_KEY", "")
     # Skip if using test/dummy keys that will fail
-    return api_key and not any(
-        invalid in api_key.lower() for invalid in ["test", "dummy", "fake"]
-    )
+    return api_key and not any(invalid in api_key.lower() for invalid in ["test", "dummy", "fake"])
 
 
 @pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")
@@ -131,7 +129,9 @@ class TestBasicFlowIntegrity:
         assert "oops" not in response.lower()
 
         # Provide quote
-        quote = '"This platform represents a breakthrough in AI accessibility," said CEO Jane Smith.'
+        quote = (
+            '"This platform represents a breakthrough in AI accessibility," said CEO Jane Smith.'
+        )
         response = bot.send(quote)
         assert response is not None
         assert "oops" not in response.lower()

@@ -12,9 +12,7 @@ def create_thread():
 
 
 def run_thread(thread_id: str, user_msg: str):
-    client.beta.threads.messages.create(
-        thread_id=thread_id, role="user", content=user_msg
-    )
+    client.beta.threads.messages.create(thread_id=thread_id, role="user", content=user_msg)
     run = client.beta.threads.runs.create(
         thread_id=thread_id,
         assistant_id="asst_5MmNyeVDUeYi3RnbX0jCuSpU",  # Use actual assistant ID

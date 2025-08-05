@@ -55,9 +55,7 @@ def _save(slot: str, value: str, session_id: Optional[int] = None) -> str:
                 raise Exception("Database session not available")
 
             # Check if this field already exists for this session
-            statement = select(Answer).where(
-                Answer.session_id == session_id, Answer.field == slot
-            )
+            statement = select(Answer).where(Answer.session_id == session_id, Answer.field == slot)
             existing = db.exec(statement).first()
 
             if existing:

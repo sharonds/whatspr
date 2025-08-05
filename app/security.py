@@ -97,23 +97,17 @@ def log_security_event(event_type: str, details: dict, phone: Optional[str] = No
 _rate_limit_storage = defaultdict(list)
 
 
-def validate_request_rate(
-    phone: str, max_requests: int = 10, window_seconds: int = 60
-) -> bool:
+def validate_request_rate(phone: str, max_requests: int = 10, window_seconds: int = 60) -> bool:
     """Basic rate limiting validation."""
     now = time.time()
     phone_requests = _rate_limit_storage[phone]
 
     # Clean old requests
-    phone_requests[:] = [
-        req_time for req_time in phone_requests if now - req_time < window_seconds
-    ]
+    phone_requests[:] = [req_time for req_time in phone_requests if now - req_time < window_seconds]
 
     # Check if under limit
     if len(phone_requests) >= max_requests:
-        log_security_event(
-            "rate_limit_exceeded", {"requests": len(phone_requests)}, phone
-        )
+        log_security_event("rate_limit_exceeded", {"requests": len(phone_requests)}, phone)
         return False
 
     # Add current request
