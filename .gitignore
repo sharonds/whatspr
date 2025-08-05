@@ -10,6 +10,13 @@ whatspr.db
 .specstory/
 test-action*.md
 
+# Assistant cache files
+.assistant_id*
+
+# Temporary tunnel URLs
+.current_webhook_url
+.current_tunnel_url
+
 # Security - API keys and secrets
 *.key
 *.pem
