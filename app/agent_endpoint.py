@@ -1,21 +1,68 @@
 """WhatsApp webhook endpoints for AI agent conversation handling.
 
 Provides FastAPI routes for processing WhatsApp messages through AI agent,
-managing conversation sessions, and dispatching tool calls.
+managing conversation sessions, and dispatching tool calls with timeout protection.
 """
 
+import asyncio
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from fastapi import APIRouter, Request
 from .agent_runtime import run_thread, ATOMIC_FUNCS
 from .prefilter import clean_message, twiml
 from .validator_tool import validate_local
 from . import tools_atomic as tools
 import structlog
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, List
 
 router = APIRouter()
 log = structlog.get_logger("agent")
 
 _sessions: Dict[str, Optional[str]] = {}  # phone -> thread_id (None until first message)
+
+# Maximum time to spend on AI processing (Twilio timeout is ~15-20s)
+MAX_AI_PROCESSING_TIME = 8.0  # Leave 7-12s buffer for request/response overhead
+
+
+async def run_thread_with_timeout(thread_id: Optional[str], user_msg: str, timeout_seconds: float = MAX_AI_PROCESSING_TIME) -> Tuple[str, str, List[dict]]:
+    """Run thread with timeout protection to prevent Twilio webhook timeouts.
+    
+    Args:
+        thread_id: Optional thread ID for conversation continuation.
+        user_msg: User message to process.
+        timeout_seconds: Maximum time to wait for response.
+        
+    Returns:
+        Tuple of (reply, thread_id, tool_calls) or fallback response on timeout.
+    """
+    start_time = time.time()
+    
+    try:
+        # Run the blocking OpenAI call in a thread with asyncio timeout
+        loop = asyncio.get_event_loop()
+        task = loop.run_in_executor(None, run_thread, thread_id, user_msg)
+        reply, thread_id, tool_calls = await asyncio.wait_for(task, timeout=timeout_seconds)
+        
+        elapsed = time.time() - start_time
+        log.info("ai_processing_time", elapsed_seconds=elapsed, timeout_seconds=timeout_seconds)
+        
+        return reply, thread_id, tool_calls
+        
+    except asyncio.TimeoutError:
+        elapsed = time.time() - start_time
+        log.warning("ai_timeout", elapsed_seconds=elapsed, timeout_seconds=timeout_seconds, user_msg=user_msg[:100])
+        
+        # Return a graceful fallback response
+        fallback_reply = "I'm processing your request. Please give me a moment and try again shortly."
+        return fallback_reply, thread_id or "", []
+        
+    except Exception as e:
+        elapsed = time.time() - start_time
+        log.error("ai_error_in_timeout", error=str(e), elapsed_seconds=elapsed, exc_info=True)
+        
+        # Return error fallback
+        fallback_reply = "I'm having trouble processing your request right now. Please try again."
+        return fallback_reply, thread_id or "", []
 
 
 # Tool dispatch table for cleaner handling
@@ -106,14 +153,19 @@ async def agent_hook(request: Request):
         clean = "I want to announce a partnership or integration"
 
     try:
+        request_start_time = time.time()
         log.info(
             "debug_request",
             phone_hash=phone[-4:] if phone else "none",
             body_length=len(clean),
         )
-        reply, thread_id, tool_calls = run_thread(thread_id, clean)
+        
+        # Use timeout-protected AI processing
+        reply, thread_id, tool_calls = await run_thread_with_timeout(thread_id, clean)
         _sessions[phone] = thread_id  # Update session with actual thread_id
-        log.info("debug_response", reply_length=len(reply), tool_count=len(tool_calls))
+        
+        processing_time = time.time() - request_start_time
+        log.info("debug_response", reply_length=len(reply), tool_count=len(tool_calls), total_time=processing_time)
 
         # Handle tool calls using dispatch table
         for call in tool_calls:
