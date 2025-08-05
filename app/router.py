@@ -7,7 +7,7 @@ from .config import settings
 def get_or_create_session(phone: str) -> SessionModel:
     with Session(engine) as db:
         stmt = select(SessionModel).where(
-            SessionModel.phone == phone, SessionModel.completed == False
+            SessionModel.phone == phone, not SessionModel.completed
         )
         session = db.exec(stmt).first()
         if session:
@@ -22,7 +22,10 @@ def get_or_create_session(phone: str) -> SessionModel:
 def answered_fields(session_id: int) -> List[str]:
     with Session(engine) as db:
         return [
-            r for r in db.exec(select(Answer.field).where(Answer.session_id == session_id)).all()
+            r
+            for r in db.exec(
+                select(Answer.field).where(Answer.session_id == session_id)
+            ).all()
         ]
 
 
@@ -36,8 +39,8 @@ def next_unanswered_field(session_id: int) -> Optional[str]:
     answered = set(answered_fields(session_id))
 
     # Use flow spec if available, otherwise fall back to legacy required_fields
-    if settings.flow and 'slots' in settings.flow:
-        field_list = [slot['id'] for slot in settings.flow['slots']]
+    if settings.flow and "slots" in settings.flow:
+        field_list = [slot["id"] for slot in settings.flow["slots"]]
     else:
         field_list = settings.required_fields
 

@@ -48,14 +48,16 @@ def _save(slot: str, value: str, session_id: Optional[int] = None) -> str:
         # For staging/testing, use a default session ID if none provided
         # In production, this should come from the conversation context
         if session_id is None:
-            session_id = int(os.environ.get('DEFAULT_SESSION_ID', '1'))
+            session_id = int(os.environ.get("DEFAULT_SESSION_ID", "1"))
 
         with get_db_session() as db:
             if db is None:
                 raise Exception("Database session not available")
 
             # Check if this field already exists for this session
-            statement = select(Answer).where(Answer.session_id == session_id, Answer.field == slot)
+            statement = select(Answer).where(
+                Answer.session_id == session_id, Answer.field == slot
+            )
             existing = db.exec(statement).first()
 
             if existing:

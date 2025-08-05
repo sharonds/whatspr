@@ -12,7 +12,9 @@ def create_thread():
 
 
 def run_thread(thread_id: str, user_msg: str):
-    client.beta.threads.messages.create(thread_id=thread_id, role="user", content=user_msg)
+    client.beta.threads.messages.create(
+        thread_id=thread_id, role="user", content=user_msg
+    )
     run = client.beta.threads.runs.create(
         thread_id=thread_id,
         assistant_id="asst_5MmNyeVDUeYi3RnbX0jCuSpU",  # Use actual assistant ID
@@ -24,7 +26,10 @@ def run_thread(thread_id: str, user_msg: str):
                     "name": "save_slot",
                     "parameters": {
                         "type": "object",
-                        "properties": {"name": {"type": "string"}, "value": {"type": "string"}},
+                        "properties": {
+                            "name": {"type": "string"},
+                            "value": {"type": "string"},
+                        },
                         "required": ["name", "value"],
                     },
                 },
@@ -42,7 +47,10 @@ def run_thread(thread_id: str, user_msg: str):
             },
             {
                 "type": "function",
-                "function": {"name": "finish", "parameters": {"type": "object", "properties": {}}},
+                "function": {
+                    "name": "finish",
+                    "parameters": {"type": "object", "properties": {}},
+                },
             },
         ],
     )
