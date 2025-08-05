@@ -1,3 +1,9 @@
+"""Message preprocessing and TwiML response utilities.
+
+Provides message cleaning, emoji filtering, and TwiML response generation
+for WhatsApp message processing with length validation and sanitization.
+"""
+
 import re
 from typing import Optional
 import structlog
@@ -11,7 +17,14 @@ EMOJI_RE = re.compile("[\U00010000-\U0010ffff]", flags=re.UNICODE)
 
 
 def twiml(text: str) -> Response:
-    """Create a TwiML response with the given message text."""
+    """Create a TwiML response for WhatsApp messaging.
+
+    Args:
+        text: Message text to send back to WhatsApp user.
+
+    Returns:
+        Response: FastAPI response with TwiML XML content.
+    """
     r = MessagingResponse()
     r.message(text)
     return Response(str(r), media_type="application/xml")

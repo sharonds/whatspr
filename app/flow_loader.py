@@ -1,3 +1,9 @@
+"""Flow specification loaders for conversation configuration.
+
+Loads YAML flow specifications that define conversation structure,
+field requirements, and validation rules for press release data collection.
+"""
+
 import yaml
 import jsonschema
 from pathlib import Path
@@ -21,6 +27,17 @@ SCHEMA = {
 
 
 def load_flow(path: str):
+    """Load conversation flow specification from YAML file.
+
+    Args:
+        path: File path to YAML flow specification.
+
+    Returns:
+        dict: Parsed flow specification with slots and validation rules.
+
+    Raises:
+        ValidationError: If flow specification doesn't match schema.
+    """
     data = yaml.safe_load(Path(path).read_text())
     jsonschema.validate(data, SCHEMA)
     return data

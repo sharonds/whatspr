@@ -1,9 +1,7 @@
-# app/agent_runtime.py
-"""
-Thin wrapper around the OpenAI Assistants API.
-– Creates / re-uses threads
-– Adds a small polling back-off loop
-– Surfaces tool calls & assistant messages separately
+"""Thin wrapper around the OpenAI Assistants API.
+
+Creates/re-uses threads, adds polling back-off loop, and surfaces
+tool calls & assistant messages separately for conversation management.
 """
 
 from __future__ import annotations
@@ -42,6 +40,18 @@ ATOMIC_FUNCS = [
 
 
 def _get_or_create_assistant() -> str:
+    """Get or create OpenAI Assistant instance.
+
+    Attempts to read assistant ID from staging cache first, then falls back to
+    regular cache. If no cached ID exists, creates a new assistant with configured
+    tools and saves the ID to cache.
+
+    Returns:
+        str: The OpenAI Assistant ID.
+
+    Raises:
+        Exception: If assistant creation fails.
+    """
     # First, try to read from .assistant_id.staging
     try:
         if _ASSISTANT_STAGING_CACHE.exists():
@@ -135,16 +145,38 @@ ASSISTANT_ID = _get_or_create_assistant()
 
 
 def create_thread() -> str:
-    """Return *thread_id*"""
+    """Create a new OpenAI thread for conversation tracking.
+
+    Returns:
+        str: The unique thread ID for the created conversation thread.
+
+    Raises:
+        Exception: If thread creation fails due to API issues.
+    """
     thread: Thread = client.beta.threads.create()
     return thread.id
 
 
 def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[Dict[str, Any]]]:
-    """
-    Send user message, return assistant reply text, thread_id, and list of tool calls.
-    If thread_id is None, creates a new thread lazily.
-    Raises on permanent API error; handles polling / back-off.
+    """Execute conversation turn with OpenAI Assistant.
+
+    Sends user message to assistant, handles tool calls, and returns response.
+    Creates new thread lazily if none provided. Implements exponential backoff
+    polling for run completion with timeout protection.
+
+    Args:
+        thread_id: Optional conversation thread ID. Creates new if None.
+        user_msg: User's message content to send to assistant.
+
+    Returns:
+        Tuple containing:
+            - Assistant's reply text
+            - Thread ID (created if was None)
+            - List of tool call data (currently empty)
+
+    Raises:
+        RuntimeError: If run fails, is cancelled, or times out after max attempts.
+        Exception: If API calls fail due to network or authentication issues.
     """
     from .validator_tool import validate_local
 

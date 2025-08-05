@@ -1,3 +1,9 @@
+"""WhatsApp webhook endpoints for AI agent conversation handling.
+
+Provides FastAPI routes for processing WhatsApp messages through AI agent,
+managing conversation sessions, and dispatching tool calls.
+"""
+
 from fastapi import APIRouter, Request
 from .agent_runtime import run_thread, ATOMIC_FUNCS
 from .prefilter import clean_message, twiml
@@ -14,19 +20,38 @@ _sessions: Dict[str, Optional[str]] = {}  # phone -> thread_id (None until first
 
 # Tool dispatch table for cleaner handling
 def save_slot_fn(name: str, value: str) -> dict:
-    """Save a slot value (placeholder implementation)"""
+    """Save slot value with logging (placeholder implementation).
+
+    Args:
+        name: Slot name to save.
+        value: Value to save for the slot.
+
+    Returns:
+        dict: Status response with saved slot information.
+    """
     log.info("save_slot", name=name, value=value)
     return {"status": "saved", "name": name, "value": value}
 
 
 def get_slot_fn(name: str) -> dict:
-    """Get a slot value (placeholder implementation)"""
+    """Retrieve slot value with logging (placeholder implementation).
+
+    Args:
+        name: Slot name to retrieve.
+
+    Returns:
+        dict: Slot information with empty value (placeholder).
+    """
     log.info("get_slot", name=name)
     return {"value": "", "name": name}
 
 
 def finish_fn() -> dict:
-    """Finish the conversation (placeholder implementation)"""
+    """Mark conversation as finished with logging.
+
+    Returns:
+        dict: Completion status response.
+    """
     log.info("finish")
     return {"status": "finished"}
 
@@ -42,6 +67,17 @@ TOOL_DISPATCH = {
 
 @router.post("/agent")
 async def agent_hook(request: Request):
+    """Main agent endpoint for processing WhatsApp messages.
+
+    Handles incoming WhatsApp messages through AI agent conversation flow.
+    Manages session state, processes reset commands, and executes tool calls.
+
+    Args:
+        request: FastAPI request containing WhatsApp webhook data.
+
+    Returns:
+        Response: TwiML response with agent's reply message.
+    """
     form = await request.form()
     phone = str(form.get("From", ""))
     body = str(form.get("Body", ""))
@@ -88,5 +124,15 @@ async def agent_hook(request: Request):
 
 @router.post("/whatsapp")
 async def whatsapp_hook(request: Request):
-    """Main WhatsApp endpoint when agent is default"""
+    """Primary WhatsApp webhook endpoint for agent mode.
+
+    Routes WhatsApp webhook requests to the agent conversation handler
+    when agent mode is enabled as the default processing mode.
+
+    Args:
+        request: FastAPI request containing WhatsApp webhook data.
+
+    Returns:
+        Response: TwiML response from agent_hook.
+    """
     return await agent_hook(request)

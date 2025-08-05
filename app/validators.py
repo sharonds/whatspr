@@ -1,3 +1,9 @@
+"""Input validation utilities for press release data collection.
+
+Provides validation functions with regex patterns for different data types
+like monetary amounts and contact information with helpful user feedback.
+"""
+
 import re
 from typing import Union
 
@@ -8,7 +14,16 @@ REGEXS = {
 
 
 def validate(slot_id: str, value: str, rule: Union[str, dict, None] = None):
-    """Return (accepted: bool, hint: str)"""
+    """Validate user input against specified rules with helpful hints.
+
+    Args:
+        slot_id: Field identifier (not currently used in validation).
+        value: User input value to validate.
+        rule: Validation rule - string, dict with type/min_len, or None.
+
+    Returns:
+        tuple: (accepted: bool, hint: str) with validation result and feedback.
+    """
     if rule is None or rule == "free":
         return True, ""
     if isinstance(rule, dict):

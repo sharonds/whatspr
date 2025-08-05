@@ -1,3 +1,9 @@
+"""Basic OpenAI assistant integration (legacy implementation).
+
+Provides simple thread creation and execution for OpenAI assistants
+with hardcoded assistant ID and basic tool configuration.
+"""
+
 from openai import OpenAI
 from pathlib import Path
 import os
@@ -7,11 +13,25 @@ PROMPT = Path("prompts/assistant.txt").read_text()
 
 
 def create_thread():
+    """Create new OpenAI conversation thread.
+
+    Returns:
+        str: Thread ID for the created conversation.
+    """
     thread = client.beta.threads.create()
     return thread.id
 
 
 def run_thread(thread_id: str, user_msg: str):
+    """Execute conversation turn with hardcoded assistant.
+
+    Args:
+        thread_id: OpenAI thread ID for conversation.
+        user_msg: User message to send.
+
+    Returns:
+        str: Assistant response text or error message.
+    """
     client.beta.threads.messages.create(thread_id=thread_id, role="user", content=user_msg)
     run = client.beta.threads.runs.create(
         thread_id=thread_id,

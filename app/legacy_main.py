@@ -1,3 +1,9 @@
+"""Legacy WhatsApp webhook handler for form-based data collection.
+
+Provides sequential field collection through menu-driven interaction
+with deterministic question flow and session management.
+"""
+
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 import structlog
@@ -29,6 +35,14 @@ RESET_WORDS = {"reset", "new", "start"}
 
 
 def twiml(text: str) -> Response:
+    """Create TwiML response for legacy WhatsApp handling.
+
+    Args:
+        text: Response message text.
+
+    Returns:
+        Response: XML response for Twilio.
+    """
     resp = MessagingResponse()
     resp.message(text)
     return Response(str(resp), media_type="application/xml")
@@ -45,6 +59,14 @@ def _force_new_session(phone: str) -> SessionModel:
 
 @router.post("/whatsapp")
 async def whatsapp(request: Request):
+    """Handle WhatsApp webhook for legacy form-based collection.
+
+    Args:
+        request: FastAPI request with Twilio webhook data.
+
+    Returns:
+        Response: TwiML response with next question or completion message.
+    """
     await ensure_twilio(request)
     form = await request.form()
     phone = str(form.get("From", ""))

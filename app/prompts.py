@@ -1,4 +1,19 @@
+"""Static prompt generation for press release data collection.
+
+Provides question mapping for different press release fields with fallback
+to flow specification or legacy prompt mapping.
+"""
+
+
 def question_for(field: str) -> str:
+    """Generate question prompt for a specific field.
+
+    Args:
+        field: Field name to generate question for.
+
+    Returns:
+        str: Question prompt for the field.
+    """
     # Try to get question from flow spec first
     from .config import settings
 
