@@ -8,17 +8,15 @@ tests will be skipped with appropriate markers.
 """
 
 import pytest
-import re
 import os
-from unittest.mock import patch, MagicMock
 from tests.utils.sim_client import WhatsSim
 
 
 def has_valid_api_key():
     """Check if we have a valid OpenAI API key for testing."""
-    api_key = os.environ.get('OPENAI_API_KEY', '')
+    api_key = os.environ.get("OPENAI_API_KEY", "")
     # Skip if using test/dummy keys that will fail
-    return api_key and not any(invalid in api_key.lower() for invalid in ['test', 'dummy', 'fake'])
+    return api_key and not any(invalid in api_key.lower() for invalid in ["test", "dummy", "fake"])
 
 
 @pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")

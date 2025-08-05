@@ -1,34 +1,185 @@
-# WhatsPR Day‑1 Stable Baseline
+# WhatsPR - AI-Powered Press Release Agent
 
-Minimal, deterministic question flow **plus**:
-* Twilio HMAC verification
-* Duplicate‑Message guard
-* `RESET / new / start` keyword
-* SQLite persistence
-* Structured JSON logging with `structlog`
-* Request‑level middleware (start/end/error, latency)
+FastAPI chatbot for WhatsApp using Twilio that creates press releases through conversational AI.
 
-## 1. Setup
+## 🚀 Features
+
+### Core Functionality
+* **AI-Powered Conversations**: Natural language press release creation using OpenAI GPT
+* **Atomic Tools System**: 6 specialized tools for structured data collection
+* **Goal-Oriented Agent**: Conversational flow that adapts to user input
+* **Knowledge Base Integration**: External requirements file for intelligent responses
+
+### Production-Ready Security
+* **Input Validation**: Phone number and message sanitization
+* **Rate Limiting**: 10 requests/minute per phone number  
+* **Security Headers**: XSS protection, frame options, content type validation
+* **Request Sanitization**: Control character filtering and length limits
+* **Privacy Protection**: Hashed phone numbers in logs
+
+### Infrastructure
+* **Twilio Integration**: HMAC signature verification for webhook security
+* **SQLite Persistence**: Database storage with atomic operations
+* **Structured Logging**: JSON logging with `structlog` for monitoring
+* **Request Middleware**: Latency tracking and error handling
+* **Comprehensive Testing**: Unit tests, E2E tests, and security validation
+
+## 🛠️ Development Setup
+
+### Prerequisites
+- Python 3.9+
+- OpenAI API key
+- Twilio account with auth token
+
+### Quick Start
 
 ```bash
-cd <your repo root>
-unzip -o whatspr_day1_stable.zip           # overwrite / add files
+# Clone and setup environment
+cd whatspr-staging
 python -m venv env && source env/bin/activate
 pip install -r requirements.txt
-cp .env.example .env                       # fill TWILIO_AUTH_TOKEN
-pytest -q                                  # 2 tests should pass
+
+# Configure environment (NEVER commit .env file!)
+cp .env.example .env
+# Edit .env and add your API keys:
+#   OPENAI_API_KEY=sk-your-key-here
+#   TWILIO_AUTH_TOKEN=your-32-char-token
+
+# Verify setup
+pytest tests/ -v                           # Should pass 28+ tests
+ruff check app tests                       # Should show no errors
+
+# Start development server
 uvicorn app.main:app --reload --port 8000
-ngrok http 8000                            # paste URL into Twilio sandbox webhook
+
+# For WhatsApp integration
+ngrok http 8000                            # Paste URL into Twilio sandbox webhook
 ```
 
-## 2. Git flow
+### 🔒 Security Setup
+
+**CRITICAL**: Never commit API keys to git!
 
 ```bash
-git checkout -b day1-stable-baseline
-git add .
-git commit -m "Day 1 stable baseline with logging & tests"
-git push -u origin day1-stable-baseline
-# Open PR → reviewers → merge
+# Verify .env is in .gitignore
+grep -E "\.env$" .gitignore
+
+# Check for exposed secrets (should return nothing)
+grep -r "sk-" . --exclude-dir=.git --exclude-dir=env || echo "✅ No keys found"
 ```
 
-After merge, deploy to Cloud Run with `--min-instances 1` and point Twilio webhook to the Cloud Run URL.
+## 🧪 Testing
+
+### Test Suites Available
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Specific test categories
+pytest tests/test_tools_atomic.py -v      # Atomic tools functionality
+pytest tests/test_safety.py -v            # Security validations
+pytest tests/e2e/ -v                      # End-to-end conversation flows
+```
+
+### E2E Testing
+The E2E test suite simulates complete WhatsApp conversations:
+
+- **Happy Path Flow**: Tests complete press release creation flow
+- **Edge Cases**: Corrections, knowledge base queries, difficult inputs
+- **Tool Validation**: Verifies atomic tools are called correctly
+- **Rate Limiting**: Tests security features
+
+## 🏗️ Architecture
+
+### Atomic Tools System
+Six specialized tools for structured data collection:
+
+- `save_announcement_type` - Type of announcement (funding, product, etc.)  
+- `save_headline` - Press release headline
+- `save_key_facts` - Core facts (who, what, when, amount)
+- `save_quotes` - Spokesperson and investor quotes
+- `save_boilerplate` - Company description
+- `save_media_contact` - Contact information (name • email • phone)
+
+### Agent Runtime
+- **Goal-Oriented Conversations**: Natural dialogue flow using `prompts/assistant_v2.txt`
+- **Knowledge Integration**: External requirements file for intelligent responses
+- **Context Management**: Persistent conversation state across messages
+- **Error Recovery**: Graceful handling of corrections and invalid inputs
+
+## 📊 Monitoring & Logging
+
+### Security Events
+All security-related events are logged with structured data:
+
+```json
+{
+  "event": "security_event",
+  "phone_hash": "abc12345",
+  "event_type": "rate_limit_exceeded",
+  "details": {"requests": 15}
+}
+```
+
+### Performance Metrics
+- Request latency tracking
+- Tool execution monitoring  
+- Error rate monitoring
+- API usage tracking
+
+## 🚀 Deployment
+
+### Production Checklist
+
+- [ ] **API Keys Rotated**: Never use development keys in production
+- [ ] **Environment Variables**: Use secure secrets management
+- [ ] **Monitoring**: Set up alerts for security events and errors
+- [ ] **Rate Limits**: Configure appropriate limits for production load
+- [ ] **Backup**: Database backup strategy in place
+
+### Cloud Deployment
+
+```bash
+# Example for Cloud Run
+gcloud run deploy whatspr \
+  --source . \
+  --platform managed \
+  --region us-central1 \
+  --min-instances 1 \
+  --set-env-vars OPENAI_API_KEY=${OPENAI_API_KEY},TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+```
+
+## 📚 Documentation
+
+- **[SECURITY.md](SECURITY.md)**: Security policies and incident response
+- **[FINAL_ACCEPTANCE_TEST.md](FINAL_ACCEPTANCE_TEST.md)**: Complete testing procedures
+- **[CLAUDE.md](CLAUDE.md)**: AI agent development guidelines
+
+## 🤝 Contributing
+
+### Development Workflow
+
+```bash
+# Create feature branch
+git checkout -b feat/your-feature-name
+
+# Make changes and test
+ruff check app tests && ruff format app tests
+pytest tests/ -v
+
+# Commit with conventional commits
+git add .
+git commit -m "feat: add new feature description"
+git push -u origin feat/your-feature-name
+```
+
+### Code Quality Standards
+- All code must pass `ruff` linting
+- Test coverage required for new features
+- Security review for changes to authentication/validation
+- No secrets in repository (enforced by pre-commit hooks)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

@@ -48,7 +48,7 @@ def _save(slot: str, value: str, session_id: Optional[int] = None) -> str:
         # For staging/testing, use a default session ID if none provided
         # In production, this should come from the conversation context
         if session_id is None:
-            session_id = int(os.environ.get('DEFAULT_SESSION_ID', '1'))
+            session_id = int(os.environ.get("DEFAULT_SESSION_ID", "1"))
 
         with get_db_session() as db:
             if db is None:

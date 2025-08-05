@@ -7,7 +7,7 @@ from fastapi.responses import Response
 log = structlog.get_logger("prefilter")
 
 MAX_LEN = 1000
-EMOJI_RE = re.compile('[\U00010000-\U0010ffff]', flags=re.UNICODE)
+EMOJI_RE = re.compile("[\U00010000-\U0010ffff]", flags=re.UNICODE)
 
 
 def twiml(text: str) -> Response:
@@ -28,5 +28,5 @@ def clean_message(raw: str) -> Optional[str]:
     """
     if len(raw) > MAX_LEN:
         return None
-    no_emoji = EMOJI_RE.sub('', raw)
+    no_emoji = EMOJI_RE.sub("", raw)
     return no_emoji.strip() or None

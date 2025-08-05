@@ -2,10 +2,10 @@ def question_for(field: str) -> str:
     # Try to get question from flow spec first
     from .config import settings
 
-    if settings.flow and 'slots' in settings.flow:
-        for slot in settings.flow['slots']:
-            if slot['id'] == field:
-                return slot['ask']
+    if settings.flow and "slots" in settings.flow:
+        for slot in settings.flow["slots"]:
+            if slot["id"] == field:
+                return slot["ask"]
 
     # Fallback to legacy mapping
     mapping = {
@@ -16,4 +16,4 @@ def question_for(field: str) -> str:
         "boilerplate": "Share a one‑paragraph company boilerplate.",
         "media_contact": "Who is the media contact (name, e‑mail, phone)?",
     }
-    return mapping.get(field, f"Please provide {field.replace('_',' ')}:")
+    return mapping.get(field, f"Please provide {field.replace('_', ' ')}:")

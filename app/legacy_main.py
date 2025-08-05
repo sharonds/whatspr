@@ -108,8 +108,8 @@ async def whatsapp(request: Request):
     else:
         # We have some answers, continue with normal flow
         # Use flow spec if available, otherwise fall back to legacy required_fields
-        if settings.flow and 'slots' in settings.flow:
-            field_list = [slot['id'] for slot in settings.flow['slots']]
+        if settings.flow and "slots" in settings.flow:
+            field_list = [slot["id"] for slot in settings.flow["slots"]]
         else:
             field_list = settings.required_fields
 

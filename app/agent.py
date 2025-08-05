@@ -24,7 +24,10 @@ def run_thread(thread_id: str, user_msg: str):
                     "name": "save_slot",
                     "parameters": {
                         "type": "object",
-                        "properties": {"name": {"type": "string"}, "value": {"type": "string"}},
+                        "properties": {
+                            "name": {"type": "string"},
+                            "value": {"type": "string"},
+                        },
                         "required": ["name", "value"],
                     },
                 },
@@ -42,7 +45,10 @@ def run_thread(thread_id: str, user_msg: str):
             },
             {
                 "type": "function",
-                "function": {"name": "finish", "parameters": {"type": "object", "properties": {}}},
+                "function": {
+                    "name": "finish",
+                    "parameters": {"type": "object", "properties": {}},
+                },
             },
         ],
     )
