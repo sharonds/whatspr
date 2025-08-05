@@ -3,13 +3,28 @@
 Tests complete user conversation flows from the Final Acceptance Test Plan,
 validating agent behavior, tool calls, and response quality through simulated
 WhatsApp interactions via FastAPI TestClient.
+
+These tests require a valid OpenAI API key. If running in CI with test keys,
+tests will be skipped with appropriate markers.
 """
 
+import pytest
+import os
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app.main import app
 
 
+def has_valid_api_key():
+    """Check if we have a valid OpenAI API key for testing."""
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    # Skip if using test/dummy keys that will fail
+    return api_key and not any(
+        invalid in api_key.lower() for invalid in ["test", "dummy", "fake"]
+    )
+
+
+@pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")
 class TestHappyPathConversation:
     """Test the complete Happy Path conversation flow from Final Acceptance Test Plan."""
 
@@ -254,6 +269,7 @@ class TestHappyPathConversation:
         return any(indicator in response_lower for indicator in conversational_indicators)
 
 
+@pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")
 class TestEdgeCaseHandling:
     """Test edge cases from the Final Acceptance Test Plan."""
 
@@ -355,6 +371,7 @@ class TestEdgeCaseHandling:
         ), f"Agent did not acknowledge correction. Response: {response_text}"
 
 
+@pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")
 class TestSystemIntegration:
     """Test system integration and error handling."""
 
