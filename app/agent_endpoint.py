@@ -21,10 +21,11 @@ log = structlog.get_logger("agent")
 _sessions: Dict[str, Optional[str]] = {}  # phone -> thread_id (None until first message)
 
 # Maximum time to spend on AI processing (Twilio timeout is ~15-20s)
-MAX_AI_PROCESSING_TIME = 12.0  # Leave 3-8s buffer for request/response overhead
+# Increased to accommodate tool-heavy workflows that can take 20+ seconds
+MAX_AI_PROCESSING_TIME = 25.0  # Leave 5s buffer for request/response overhead
 
-# Retry configuration
-MAX_RETRIES = 2  # Total of 3 attempts (1 initial + 2 retries)
+# Retry configuration optimized for tool-heavy workflows
+MAX_RETRIES = 1  # Total of 2 attempts (1 initial + 1 retry) - give more time per attempt
 RETRY_BASE_DELAY = 0.5  # Base delay in seconds
 RETRY_MAX_DELAY = 2.0  # Maximum delay between retries
 
@@ -122,6 +123,9 @@ async def run_thread_with_retry(
                 error=str(e),
                 error_type=type(e).__name__,
                 elapsed_seconds=elapsed,
+                # Enhanced error details for OpenAI-specific issues
+                error_details=getattr(e, 'response', {}) if hasattr(e, 'response') else {},
+                openai_error_code=getattr(e, 'code', None) if hasattr(e, 'code') else None,
             )
 
         # Don't retry on the last attempt
@@ -140,12 +144,21 @@ async def run_thread_with_retry(
 
     # All attempts failed - handle gracefully
     elapsed = time.time() - start_time
+    
+    # Enhanced error logging with more details
+    error_summary = str(last_exception) if last_exception else "Unknown error"
+    error_type = type(last_exception).__name__ if last_exception else "Unknown"
+    
     log.error(
         "ai_all_attempts_failed",
         attempts=MAX_RETRIES + 1,
         elapsed_seconds=elapsed,
-        final_error=str(last_exception) if last_exception else "Unknown",
+        final_error=error_summary,
+        final_error_type=error_type,
         user_msg=user_msg[:100],
+        # Additional debugging info
+        timeout_seconds=timeout_seconds,
+        per_attempt_timeout=timeout_seconds / (MAX_RETRIES + 1),
     )
 
     # Create thread if needed but preserve existing thread_id on failure

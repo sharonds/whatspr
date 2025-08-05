@@ -88,7 +88,7 @@ def _get_or_create_assistant() -> str:
     assistant: Assistant = get_client().beta.assistants.create(
         name="WhatsPR Agent",
         instructions=PROMPT,
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",  # Fastest and most cost-effective model
         tools=[
             {
                 "type": "function",
