@@ -34,9 +34,10 @@ whatspr-staging/
 ### Key Components
 
 #### 1. Agent Runtime (`app/agent_runtime.py`)
-- Manages OpenAI Assistant integration
+- Manages OpenAI Assistant integration with lazy initialization pattern
 - Registers atomic tools with the assistant
 - Handles conversation threads and context
+- **Critical**: Uses `get_client()` to prevent empty API key issues at module import
 
 #### 2. Atomic Tools (`app/tools_atomic.py`)
 - Six specialized functions for structured data collection
@@ -493,6 +494,60 @@ ruff check app/ --fix
 
 # Review remaining issues manually
 ruff check app/
+```
+
+## 🚨 Troubleshooting
+
+### OpenAI API Connection Issues
+
+**Symptoms**: 50% failure rate, authentication errors, empty responses
+
+**Root Cause**: OpenAI client initialized at module import before environment variables loaded
+
+**Solution Implemented**: Lazy initialization pattern in `app/agent_runtime.py`
+
+#### Diagnostic Commands
+```bash
+# 1. Check environment variable
+echo $OPENAI_API_KEY | head -c 10
+
+# 2. Test API connection directly  
+python -c "from app.agent_runtime import get_client; print(get_client().models.list().data[0].id)"
+
+# 3. Run comprehensive diagnostic
+python test_diagnose.py
+
+# 4. Run reliability test suite
+pytest tests/test_reliability.py -v
+
+# 5. Remove stale assistant cache
+rm -f .assistant_id .assistant_id.staging
+```
+
+#### Prevention Patterns
+- Always use lazy initialization for API clients: `get_client()` instead of module-level initialization
+- Ensure environment variables are loaded before client creation
+- Add retry logic with exponential backoff for API calls
+- Implement circuit breaker patterns for reliability
+
+#### Module Import Best Practices
+```python
+# ❌ Bad: Initialize at module level
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+# ✅ Good: Lazy initialization
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            from dotenv import load_dotenv
+            load_dotenv()
+            api_key = os.environ.get("OPENAI_API_KEY", "")
+        _client = OpenAI(api_key=api_key)
+    return _client
 ```
 
 This guide ensures consistent, secure, and maintainable development practices for the WhatsPR project.
