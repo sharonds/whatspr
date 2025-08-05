@@ -63,16 +63,19 @@ whatspr-staging/
 python -m venv env && source env/bin/activate
 pip install -r requirements.txt
 
-# 2. Configure environment variables
+# 2. Install pre-commit hooks for automated code quality
+pre-commit install
+
+# 3. Configure environment variables
 cp .env.example .env
 # Edit .env with your API keys (NEVER commit this file!)
 
-# 3. Initialize database
+# 4. Initialize database
 python -c "from app.models import init_db; init_db()"
 
-# 4. Verify setup
+# 5. Verify setup with comprehensive quality checks
+./scripts/lint.sh                 # Runs pydocstyle, black, ruff, and pytest
 pytest tests/test_safety.py -v    # Should pass
-ruff check app tests              # Should show no errors
 ```
 
 ### Development Server
@@ -88,17 +91,42 @@ ngrok http 8000
 
 ### Code Quality Standards
 
-#### Linting and Formatting
+Our project enforces comprehensive code quality standards through automated tools:
+
+#### Automated Quality Enforcement
 
 ```bash
-# Check code quality
-ruff check app tests
+# Complete quality check (recommended before committing)
+./scripts/lint.sh                        # Runs all checks below
 
-# Format code
-ruff format app tests
-
-# Both commands should be run before committing
+# Individual quality checks
+pydocstyle app/ --convention=google      # Google-style docstrings
+black --check --diff app/               # Code formatting
+ruff check app/                         # Linting and style
+pytest --tb=short -v                    # Test suite
 ```
+
+#### Pre-commit Hooks
+
+All quality checks run automatically on commit:
+
+```bash
+# Install hooks (one-time setup)
+pre-commit install
+
+# Manual run (optional)
+pre-commit run --all-files
+
+# Hooks automatically run on git commit
+git commit -m "feat: new feature"       # Triggers all quality checks
+```
+
+#### Documentation Requirements
+
+- **Google-style docstrings**: Required for all functions, classes, and modules
+- **Complete coverage**: Enforced via pydocstyle with zero tolerance
+- **Clear examples**: Include usage examples for complex functions
+- **See**: [docs/DOCUMENTATION_GUIDELINES.md](DOCUMENTATION_GUIDELINES.md) for complete standards
 
 #### Testing Requirements
 
@@ -325,9 +353,14 @@ except Exception as e:
 
 ### Pre-deployment Checklist
 
+- [ ] All quality checks pass: `./scripts/lint.sh`
 - [ ] All tests pass: `pytest tests/ -v`
-- [ ] Code quality checks pass: `ruff check app tests`
+- [ ] Documentation complete: `pydocstyle app/ --convention=google`
+- [ ] Code formatting correct: `black --check app/`
+- [ ] Linting clean: `ruff check app/`
 - [ ] No secrets in repository: `grep -r "sk-" . --exclude-dir=.git --exclude-dir=env`
+- [ ] Pre-commit hooks working: `pre-commit run --all-files`
+- [ ] GitHub Actions CI passing
 - [ ] Security review completed
 - [ ] Performance testing completed
 - [ ] Monitoring and alerting configured
@@ -374,10 +407,12 @@ git push -u origin feat/your-feature-name
 
 ### Code Review Guidelines
 
+- **Code Quality**: Verify all automated quality checks pass (CI/CD must be green)
+- **Documentation**: Ensure Google-style docstrings are complete and helpful
 - **Security**: Review all changes to authentication, validation, and secrets handling
 - **Testing**: Ensure adequate test coverage for new features
 - **Performance**: Consider impact on response times and resource usage
-- **Documentation**: Update relevant documentation for API changes
+- **Standards Compliance**: Verify adherence to project coding standards
 
 ### Conventional Commits
 
@@ -390,5 +425,74 @@ Use conventional commit format:
 - `test:` - Test additions/improvements
 - `refactor:` - Code refactoring
 - `style:` - Code formatting
+
+## 🔧 IDE Setup and Tools
+
+### VS Code Configuration
+
+Recommended `.vscode/settings.json`:
+
+```json
+{
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": ["--line-length=100"],
+    "python.linting.enabled": true,
+    "python.linting.ruffEnabled": true,
+    "autoDocstring.docstringFormat": "google",
+    "editor.formatOnSave": true,
+    "python.analysis.typeCheckingMode": "basic"
+}
+```
+
+### PyCharm Configuration
+
+1. **Code Style**: Settings → Editor → Code Style → Python → Set line length to 100
+2. **Docstrings**: Settings → Tools → Python Integrated Tools → Docstring format: Google
+3. **Black Integration**: Settings → Tools → External Tools → Add Black formatter
+4. **Ruff Integration**: Install ruff plugin from marketplace
+
+### Pre-commit Hook Troubleshooting
+
+```bash
+# If hooks aren't running
+pre-commit uninstall && pre-commit install
+
+# If hooks fail after installation
+pre-commit run --all-files
+
+# Update hooks to latest versions
+pre-commit autoupdate
+```
+
+### Common Quality Check Fixes
+
+#### Docstring Issues
+```bash
+# Check what's missing
+pydocstyle app/ --convention=google
+
+# Common fixes:
+# - Add module docstrings to .py files
+# - Add function docstrings with Args/Returns sections
+# - Use Google-style format exactly
+```
+
+#### Formatting Issues
+```bash
+# Auto-fix formatting
+black app/ --line-length=100
+
+# Check before committing
+black --check --diff app/
+```
+
+#### Linting Issues
+```bash
+# Auto-fix many issues
+ruff check app/ --fix
+
+# Review remaining issues manually
+ruff check app/
+```
 
 This guide ensures consistent, secure, and maintainable development practices for the WhatsPR project.
