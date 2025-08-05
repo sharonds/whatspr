@@ -17,6 +17,8 @@ If you discover a security vulnerability in WhatsPR, please report it responsibl
 - `TWILIO_AUTH_TOKEN`
 - Any files ending in `.key`, `.pem`, or containing `secret`
 
+**CRITICAL**: The `OPENAI_API_KEY` must be available before module import to prevent authentication failures. The application uses lazy initialization to handle environment variable loading, but proper setup is essential for reliability.
+
 ### Development Setup
 
 1. **Copy environment template:**
