@@ -203,6 +203,7 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     delay = 0.5
     max_attempts = 20  # Prevent infinite loops
     attempts = 0
+    tool_calls_made = []  # Track tool calls for return value
 
     while attempts < max_attempts:
         attempts += 1
@@ -216,6 +217,15 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
             # Handle tool calls
             tool_outputs = []
             for tool_call in run.required_action.submit_tool_outputs.tool_calls:
+                # Track this tool call for return value
+                tool_calls_made.append(
+                    {
+                        "name": tool_call.function.name,
+                        "arguments": json.loads(tool_call.function.arguments),
+                        "id": tool_call.id,
+                    }
+                )
+
                 if tool_call.function.name == "validate_local":
                     args = json.loads(tool_call.function.arguments)
                     result = validate_local(args["name"], args["value"])
@@ -276,8 +286,8 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
         else "[No response]"
     )
 
-    # 5. collect tool call payloads (if any) - for now return empty
+    # 5. collect tool call payloads (if any) - return the actual calls made
     # Tool handling is done internally in the polling loop above
-    tools: List[Dict[str, Any]] = []
+    tools: List[Dict[str, Any]] = tool_calls_made
 
     return reply_text, thread_id, tools
