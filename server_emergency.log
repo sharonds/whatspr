@@ -1,0 +1,7 @@
+INFO:     Started server process [90425]
+INFO:     Waiting for application startup.
+{"legacy_mode": false, "event": "db_ready", "timestamp": "2025-08-05T22:43:40.521387Z"}
+INFO:     Application startup complete.
+ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8004): address already in use
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
