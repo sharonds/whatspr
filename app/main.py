@@ -1,14 +1,14 @@
-from fastapi import FastAPI
 import os
 import structlog
+from fastapi import FastAPI
 from dotenv import load_dotenv
-
-# Load environment variables first
-load_dotenv()
 
 from .models import init_db
 from .logging_config import configure_logging
 from .middleware import RequestLogMiddleware
+
+# Load environment variables first
+load_dotenv()
 
 # Initialize logging and database
 configure_logging()

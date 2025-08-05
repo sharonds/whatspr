@@ -8,9 +8,7 @@ tests will be skipped with appropriate markers.
 """
 
 import pytest
-import re
 import os
-from unittest.mock import patch, MagicMock
 from tests.utils.sim_client import WhatsSim
 
 

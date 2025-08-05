@@ -9,7 +9,9 @@ from typing import Dict, Optional
 router = APIRouter()
 log = structlog.get_logger("agent")
 
-_sessions: Dict[str, Optional[str]] = {}  # phone -> thread_id (None until first message)
+_sessions: Dict[
+    str, Optional[str]
+] = {}  # phone -> thread_id (None until first message)
 
 
 # Tool dispatch table for cleaner handling
@@ -63,7 +65,9 @@ async def agent_hook(request: Request):
 
     try:
         log.info(
-            "debug_request", phone_hash=phone[-4:] if phone else "none", body_length=len(clean)
+            "debug_request",
+            phone_hash=phone[-4:] if phone else "none",
+            body_length=len(clean),
         )
         reply, thread_id, tool_calls = run_thread(thread_id, clean)
         _sessions[phone] = thread_id  # Update session with actual thread_id
@@ -73,13 +77,15 @@ async def agent_hook(request: Request):
         for call in tool_calls:
             call_dict = dict(call)  # Ensure proper dict type for type checker
             if call_dict.get("name") in TOOL_DISPATCH:
-                result = TOOL_DISPATCH[call_dict["name"]](**call_dict.get("arguments", {}))
+                TOOL_DISPATCH[call_dict["name"]](**call_dict.get("arguments", {}))
                 log.info("tool_executed", name=call_dict["name"])
             else:
                 log.warning("unknown_tool", name=call_dict.get("name", "unknown"))
 
     except Exception as e:
-        log.error("agent_error", error=str(e), error_type=type(e).__name__, exc_info=True)
+        log.error(
+            "agent_error", error=str(e), error_type=type(e).__name__, exc_info=True
+        )
         return twiml("Oops, temporary error. Try again.")
     return twiml(reply)
 

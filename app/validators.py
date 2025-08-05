@@ -2,8 +2,8 @@ import re
 from typing import Union
 
 REGEXS = {
-    "money": re.compile(r'^\$?\d[\d,\.]*\s?(?:[mk]|million)?$', re.I),
-    "email_phone": re.compile(r'^.+@.+\..+.*\+?[0-9][0-9\-\s]{6,}$', re.I),
+    "money": re.compile(r"^\$?\d[\d,\.]*\s?(?:[mk]|million)?$", re.I),
+    "email_phone": re.compile(r"^.+@.+\..+.*\+?[0-9][0-9\-\s]{6,}$", re.I),
 }
 
 
