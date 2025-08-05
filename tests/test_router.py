@@ -12,14 +12,10 @@ def test_flow():
         # Get existing session for this phone and delete its answers
         from app.models import SessionModel
 
-        existing_session = db.exec(
-            select(SessionModel).where(SessionModel.phone == phone)
-        ).first()
+        existing_session = db.exec(select(SessionModel).where(SessionModel.phone == phone)).first()
         if existing_session:
             # Delete answers for this session
-            answers = db.exec(
-                select(Answer).where(Answer.session_id == existing_session.id)
-            ).all()
+            answers = db.exec(select(Answer).where(Answer.session_id == existing_session.id)).all()
             for answer in answers:
                 db.delete(answer)
             # Delete the session

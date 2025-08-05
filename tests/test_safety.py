@@ -24,6 +24,6 @@ def test_no_production_keys_in_staging():
     openai_key = os.getenv("OPENAI_API_KEY", "")
 
     # Assert that the key doesn't contain 'prod' substring
-    assert "prod" not in openai_key.lower(), (
-        "OPENAI_API_KEY in .env.staging contains 'prod' - this might be a production key!"
-    )
+    assert (
+        "prod" not in openai_key.lower()
+    ), "OPENAI_API_KEY in .env.staging contains 'prod' - this might be a production key!"

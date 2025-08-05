@@ -14,8 +14,7 @@ def handle_help(current_slot: Optional[str] = None):
     """Handle help command, showing available commands and slot-specific examples."""
     extra = f"\n/example – example answer for {current_slot}" if current_slot else ""
     return _tw(
-        "Commands:\n/reset – start over\n/change – change category\n/help – this help"
-        + extra
+        "Commands:\n/reset – start over\n/change – change category\n/help – this help" + extra
     )
 
 

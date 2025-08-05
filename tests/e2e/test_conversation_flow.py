@@ -122,9 +122,7 @@ class TestHappyPathConversation:
 
         # Verify conversation efficiency (should complete within reasonable turns)
         # This is a basic check - in a real implementation, you'd track turn count
-        assert len(self.tool_calls) > 0, (
-            "No atomic tools were called during conversation"
-        )
+        assert len(self.tool_calls) > 0, "No atomic tools were called during conversation"
 
     def _is_template_response(self, response_text):
         """Check if response follows rigid template patterns."""
@@ -159,24 +157,20 @@ class TestHappyPathConversation:
         missing_critical = critical_tools - called_tools
 
         # This assertion should fail initially to create a failing test
-        assert len(missing_critical) == 0, (
-            f"Critical tools not called: {missing_critical}"
-        )
+        assert len(missing_critical) == 0, f"Critical tools not called: {missing_critical}"
 
         # Verify data quality in tool calls
         for call in self.tool_calls:
             if call["tool"] == "save_headline":
                 # Should contain headline data
                 call_data = str(call["args"]) + str(call["kwargs"])
-                assert "techcorp secures" in call_data.lower(), (
-                    "Headline not properly captured"
-                )
+                assert "techcorp secures" in call_data.lower(), "Headline not properly captured"
 
             elif call["tool"] == "save_key_facts":
                 call_data = str(call["args"]) + str(call["kwargs"])
-                assert "15m" in call_data.lower() or "$15" in call_data.lower(), (
-                    "Key facts with funding amount not properly captured"
-                )
+                assert (
+                    "15m" in call_data.lower() or "$15" in call_data.lower()
+                ), "Key facts with funding amount not properly captured"
 
             elif call["tool"] == "save_quotes":
                 call_data = str(call["args"]) + str(call["kwargs"])
@@ -212,9 +206,7 @@ class TestHappyPathConversation:
                 break
 
         # Verify we stayed within turn limit
-        assert turn_count <= max_turns, (
-            f"Conversation exceeded {max_turns} turns: {turn_count}"
-        )
+        assert turn_count <= max_turns, f"Conversation exceeded {max_turns} turns: {turn_count}"
 
     def test_natural_conversation_flow(self):
         """Verify agent maintains natural, conversational responses throughout."""
@@ -259,9 +251,7 @@ class TestHappyPathConversation:
         ]
 
         response_lower = response_text.lower()
-        return any(
-            indicator in response_lower for indicator in conversational_indicators
-        )
+        return any(indicator in response_lower for indicator in conversational_indicators)
 
 
 class TestEdgeCaseHandling:
@@ -314,9 +304,9 @@ class TestEdgeCaseHandling:
         )
 
         # This assertion should initially fail to create a failing test
-        assert knowledge_matches >= 3, (
-            f"Agent did not reference knowledge file adequately. Response: {response_text}"
-        )
+        assert (
+            knowledge_matches >= 3
+        ), f"Agent did not reference knowledge file adequately. Response: {response_text}"
 
     def test_correction_handling(self):
         """Test agent's ability to handle corrections to previously provided information."""
@@ -360,9 +350,9 @@ class TestEdgeCaseHandling:
         )
 
         # This assertion should initially fail to create a failing test
-        assert acknowledged_correction, (
-            f"Agent did not acknowledge correction. Response: {response_text}"
-        )
+        assert (
+            acknowledged_correction
+        ), f"Agent did not acknowledge correction. Response: {response_text}"
 
 
 class TestSystemIntegration:
