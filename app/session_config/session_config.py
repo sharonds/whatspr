@@ -20,14 +20,14 @@ class SessionConfig:
         ValueError: If configuration values are invalid.
     """
 
-    ttl_seconds: int = 1800  # 30 minutes default
-    cleanup_interval: int = 300  # 5 minutes default
+    ttl_seconds: float = 1800  # 30 minutes default
+    cleanup_interval: float = 300  # 5 minutes default
     allow_test_values: bool = False  # Allow short values for testing
 
     def __post_init__(self):
         """Validate configuration after initialization."""
-        min_ttl = 1 if self.allow_test_values else 60
-        min_cleanup = 1 if self.allow_test_values else 30
+        min_ttl = 0.1 if self.allow_test_values else 60
+        min_cleanup = 0.01 if self.allow_test_values else 30
 
         if self.ttl_seconds < min_ttl:
             raise ValueError(f"TTL must be at least {min_ttl} seconds")

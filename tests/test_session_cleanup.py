@@ -110,7 +110,7 @@ class TestSessionManager:
 
     def test_session_count_tracking(self):
         """Test session count tracking for memory monitoring."""
-        manager = SessionManager(SessionConfig(ttl_seconds=300))
+        manager = SessionManager(SessionConfig(ttl_seconds=300, cleanup_interval=60))
 
         assert manager.get_session_count() == 0
 
@@ -128,7 +128,7 @@ class TestSessionManager:
 
     def test_memory_usage_estimation(self):
         """Test memory usage estimation for monitoring."""
-        manager = SessionManager(SessionConfig(ttl_seconds=300))
+        manager = SessionManager(SessionConfig(ttl_seconds=300, cleanup_interval=60))
 
         # Add sessions with known data sizes
         test_data = [
@@ -217,7 +217,7 @@ class TestMemoryLeakPrevention:
 
     def test_large_session_volume_cleanup(self):
         """Test system handles large volume of sessions with proper cleanup."""
-        manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05))
+        manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True))
 
         # Create large number of sessions
         initial_session_count = 1000
@@ -237,7 +237,7 @@ class TestMemoryLeakPrevention:
 
     def test_memory_growth_bounds(self):
         """Test memory usage stays within reasonable bounds."""
-        manager = SessionManager(SessionConfig(ttl_seconds=1))
+        manager = SessionManager(SessionConfig(ttl_seconds=1, cleanup_interval=0.5, allow_test_values=True))
 
         # Add sessions and measure memory growth
         initial_memory = manager.estimate_memory_usage()
@@ -263,7 +263,7 @@ class TestMemoryLeakPrevention:
 
     def test_cleanup_performance_under_load(self):
         """Test cleanup performance doesn't degrade significantly under load."""
-        manager = SessionManager(SessionConfig(ttl_seconds=0.1))
+        manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True))
 
         # Add many sessions
         session_count = 5000
@@ -386,7 +386,7 @@ class TestMonitoringAndObservability:
         assert metrics['total_sessions_created'] == 5
 
         # Expire sessions
-        manager = SessionManager(SessionConfig(ttl_seconds=0.1))
+        manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True))
         for i in range(3):
             manager.set_session(f"+{i:010d}", f"thread_{i}")
 
@@ -399,7 +399,7 @@ class TestMonitoringAndObservability:
     def test_cleanup_logging_and_alerts(self):
         """Test proper logging during cleanup operations."""
         with patch('app.session_manager.log') as mock_log:
-            manager = SessionManager(SessionConfig(ttl_seconds=0.1))
+            manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True))
 
             # Create and expire sessions
             for i in range(10):
