@@ -1,3 +1,9 @@
+"""Security validation and request protection utilities.
+
+Provides comprehensive security features including Twilio webhook validation,
+rate limiting, input sanitization, and privacy-preserving logging.
+"""
+
 import os
 import re
 import time
@@ -15,11 +21,22 @@ twilio_validator = RequestValidator(settings.twilio_auth_token)
 
 
 class SecurityConfig:
-    """Security configuration with validation."""
+    """Security configuration management with environment validation.
+
+    Provides methods for validating API keys and environment variables
+    required for secure operation of the application.
+    """
 
     @classmethod
     def get_openai_key(cls) -> str:
-        """Get OpenAI API key with validation."""
+        """Retrieve and validate OpenAI API key from environment.
+
+        Returns:
+            str: Valid OpenAI API key.
+
+        Raises:
+            ValueError: If API key is missing or has invalid format.
+        """
         key = os.getenv("OPENAI_API_KEY")
         if not key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
@@ -31,7 +48,14 @@ class SecurityConfig:
 
     @classmethod
     def validate_environment(cls) -> bool:
-        """Validate all required environment variables are present and valid."""
+        """Validate all required environment variables.
+
+        Checks that all critical environment variables are present and
+        have valid formats required for application security.
+
+        Returns:
+            bool: True if all environment variables are valid, False otherwise.
+        """
         try:
             cls.get_openai_key()
             return True
@@ -41,14 +65,28 @@ class SecurityConfig:
 
 
 class SecureMessageRequest(BaseModel):
-    """Validated request model for incoming messages."""
+    """Pydantic model for validating incoming WhatsApp message requests.
+
+    Provides validation for phone number format and message content
+    with security-focused sanitization and length limits.
+    """
 
     From: str
     Body: str
 
     @validator("From")
     def validate_phone_number(cls, v):
-        """Validate phone number format."""
+        """Validate phone number format and structure.
+
+        Args:
+            v: Phone number string to validate.
+
+        Returns:
+            str: Validated phone number in international format.
+
+        Raises:
+            ValueError: If phone number format is invalid.
+        """
         if not v:
             raise ValueError("Phone number is required")
 
@@ -69,7 +107,17 @@ class SecureMessageRequest(BaseModel):
 
     @validator("Body")
     def validate_message_body(cls, v):
-        """Validate message body content."""
+        """Validate and sanitize message body content.
+
+        Args:
+            v: Message body content to validate.
+
+        Returns:
+            str: Sanitized message body with control characters removed.
+
+        Raises:
+            ValueError: If message is too long or contains invalid content.
+        """
         if v is None:
             return ""
 
@@ -84,7 +132,13 @@ class SecureMessageRequest(BaseModel):
 
 
 def log_security_event(event_type: str, details: dict, phone: Optional[str] = None):
-    """Log security-related events for monitoring."""
+    """Log security events with privacy-preserving phone number hashing.
+
+    Args:
+        event_type: Type of security event (e.g., 'rate_limit_exceeded').
+        details: Additional event details to log.
+        phone: Optional phone number to include (will be hashed for privacy).
+    """
     # Hash phone number for privacy
     phone_hash = None
     if phone:
@@ -98,7 +152,19 @@ _rate_limit_storage = defaultdict(list)
 
 
 def validate_request_rate(phone: str, max_requests: int = 10, window_seconds: int = 60) -> bool:
-    """Basic rate limiting validation."""
+    """Validate request rate limits for phone numbers.
+
+    Implements sliding window rate limiting to prevent abuse. Uses in-memory
+    storage for simplicity (production should use Redis).
+
+    Args:
+        phone: Phone number to check rate limits for.
+        max_requests: Maximum allowed requests in the time window.
+        window_seconds: Time window in seconds for rate limiting.
+
+    Returns:
+        bool: True if request is allowed, False if rate limit exceeded.
+    """
     now = time.time()
     phone_requests = _rate_limit_storage[phone]
 
@@ -116,7 +182,11 @@ def validate_request_rate(phone: str, max_requests: int = 10, window_seconds: in
 
 
 def get_security_headers() -> dict:
-    """Get security headers for responses."""
+    """Generate security headers for HTTP responses.
+
+    Returns:
+        dict: Security headers to prevent common web vulnerabilities.
+    """
     return {
         "X-Content-Type-Options": "nosniff",
         "X-Frame-Options": "DENY",
@@ -126,7 +196,17 @@ def get_security_headers() -> dict:
 
 
 async def ensure_twilio(request: Request):
-    """Validate Twilio webhook signature."""
+    """Validate Twilio webhook signature for request authenticity.
+
+    Verifies that the incoming request is actually from Twilio by
+    validating the X-Twilio-Signature header against the request payload.
+
+    Args:
+        request: FastAPI request object containing Twilio webhook data.
+
+    Raises:
+        HTTPException: 403 Forbidden if signature validation fails.
+    """
     signature = request.headers.get("X-Twilio-Signature", "")
     url = str(request.url)
     form = await request.form()

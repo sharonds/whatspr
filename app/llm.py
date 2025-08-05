@@ -10,6 +10,14 @@ from .config import settings
 
 
 def rephrase_question(field: str) -> str:
+    """Rephrase question using LLM or return static prompt.
+
+    Args:
+        field: Field name to generate question for.
+
+    Returns:
+        str: Rephrased question from LLM or static question mapping.
+    """
     # Disabled or no key ➜ deterministic mapping
     if not settings.llm_enabled or not settings.openai_api_key:
         return question_for(field)

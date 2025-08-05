@@ -1,3 +1,9 @@
+"""Local validation tool for OpenAI Assistant integration.
+
+Provides validation functions that can be called by the OpenAI Assistant
+to validate user input against configured rules with retry logic.
+"""
+
 from .validators import validate
 from .config import settings
 
@@ -5,6 +11,15 @@ RETRIES = {}
 
 
 def validate_local(name: str, value: str):
+    """Validate user input with retry logic for OpenAI Assistant.
+
+    Args:
+        name: Field name to validate.
+        value: User input value to validate.
+
+    Returns:
+        dict: Validation result with 'accepted' boolean and 'hint' message.
+    """
     try:
         if settings.flow and "slots" in settings.flow:
             slot = next(s for s in settings.flow["slots"] if s["id"] == name)

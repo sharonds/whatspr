@@ -1,3 +1,9 @@
+"""Command parsing and handling utilities for WhatsApp interactions.
+
+Provides command recognition and response generation for user commands
+like help, reset, and field changes in conversation flow.
+"""
+
 from typing import Optional
 from fastapi.responses import Response
 from twilio.twiml.messaging_response import MessagingResponse

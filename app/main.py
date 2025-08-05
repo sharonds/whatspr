@@ -1,3 +1,10 @@
+"""FastAPI application setup for WhatsPR WhatsApp chatbot.
+
+Main application module that configures FastAPI, initializes database,
+sets up logging, and routes between legacy and agent modes based on
+environment configuration.
+"""
+
 import os
 import structlog
 from fastapi import FastAPI
@@ -22,6 +29,11 @@ app.add_middleware(RequestLogMiddleware)
 
 @app.on_event("startup")
 def _startup():
+    """Initialize application on startup.
+
+    Sets up database tables and logs application readiness
+    with current operating mode.
+    """
     init_db()
     log.info("db_ready", legacy_mode=LEGACY)
 
