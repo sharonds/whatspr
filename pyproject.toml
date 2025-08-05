@@ -1,4 +1,10 @@
 [tool.black]
 line-length = 100
-target-version = ['py312']
+target-version = ['py39']
 skip-string-normalization = true
+
+[tool.pydocstyle]
+convention = "google"
+add-ignore = ["D100", "D104", "D105", "D107"]
+match-dir = "(?!tests|migrations|scripts)"
+match = "(?!test_|conftest).*\\.py"
