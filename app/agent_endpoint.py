@@ -91,11 +91,19 @@ async def agent_hook(request: Request):
         # Clear session, thread will be created lazily when needed
         _sessions[phone] = None
         return twiml(
-            "👋 Hi! Pick the kind of announcement:\n  1️⃣ Funding round\n  2️⃣ Product launch\n  3️⃣ Partnership / integration"
+            "👋 Hi! What kind of announcement?\n  Press 1 for Funding round\n  Press 2 for Product launch\n  Press 3 for Partnership / integration"
         )
 
     # Get thread_id (may be None for new sessions)
     thread_id = _sessions.get(phone)
+
+    # Pre-process numeric menu selections
+    if clean.strip() in ["1", "1️⃣"]:
+        clean = "I want to announce a funding round"
+    elif clean.strip() in ["2", "2️⃣"]:
+        clean = "I want to announce a product launch"
+    elif clean.strip() in ["3", "3️⃣"]:
+        clean = "I want to announce a partnership or integration"
 
     try:
         log.info(
