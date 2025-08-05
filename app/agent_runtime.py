@@ -19,7 +19,24 @@ from openai.types.beta import Thread, Assistant
 log = logging.getLogger("whatspr.agent")
 
 # ---------- one-time init ----------
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+# Lazy initialization to ensure env vars are loaded
+_client = None
+
+
+def get_client():
+    """Get or create OpenAI client with proper API key."""
+    global _client
+    if _client is None:
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            # Try loading from .env if not in environment
+            from dotenv import load_dotenv
+
+            load_dotenv()
+            api_key = os.environ.get("OPENAI_API_KEY", "")
+        _client = OpenAI(api_key=api_key)
+    return _client
+
 
 PROMPT = Path("prompts/assistant_v2.txt").read_text().strip()
 
@@ -68,7 +85,7 @@ def _get_or_create_assistant() -> str:
     if _ASSISTANT_CACHE.exists():
         return _ASSISTANT_CACHE.read_text().strip()
 
-    assistant: Assistant = client.beta.assistants.create(
+    assistant: Assistant = get_client().beta.assistants.create(
         name="WhatsPR Agent",
         instructions=PROMPT,
         model="gpt-3.5-turbo",
@@ -153,7 +170,7 @@ def create_thread() -> str:
     Raises:
         Exception: If thread creation fails due to API issues.
     """
-    thread: Thread = client.beta.threads.create()
+    thread: Thread = get_client().beta.threads.create()
     return thread.id
 
 
@@ -185,14 +202,14 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
         thread_id = create_thread()
 
     # 1. append user message
-    client.beta.threads.messages.create(
+    get_client().beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
         content=user_msg,
     )
 
     # 2. kick off a run
-    run = client.beta.threads.runs.create(
+    run = get_client().beta.threads.runs.create(
         thread_id=thread_id,
         assistant_id=ASSISTANT_ID,
         # No instructions override: already baked into the assistant.
@@ -207,7 +224,7 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
 
     while attempts < max_attempts:
         attempts += 1
-        run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        run = get_client().beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
 
         if run.status == "completed":
             break
@@ -266,7 +283,7 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
 
             # Submit tool outputs
             if tool_outputs:
-                run = client.beta.threads.runs.submit_tool_outputs(
+                run = get_client().beta.threads.runs.submit_tool_outputs(
                     thread_id=thread_id, run_id=run.id, tool_outputs=tool_outputs
                 )
         else:
@@ -278,7 +295,7 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
         raise RuntimeError(f"Run {run.id} timed out after {max_attempts} attempts")
 
     # 4. fetch last assistant message (sorted by created_at desc)
-    msgs = client.beta.threads.messages.list(thread_id=thread_id, limit=5)
+    msgs = get_client().beta.threads.messages.list(thread_id=thread_id, limit=5)
     assistant_msg = next((m for m in msgs.data if m.role == "assistant"), None)
     reply_text = (
         assistant_msg.content[0].text.value
