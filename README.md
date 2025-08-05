@@ -2,6 +2,8 @@
 
 FastAPI chatbot for WhatsApp using Twilio that creates press releases through conversational AI.
 
+**🆕 Latest Updates**: Complete code quality enforcement system with Google-style docstrings, automated formatting, comprehensive linting, and CI/CD pipeline integration.
+
 ## 🚀 Features
 
 ### Core Functionality
@@ -24,12 +26,21 @@ FastAPI chatbot for WhatsApp using Twilio that creates press releases through co
 * **Request Middleware**: Latency tracking and error handling
 * **Comprehensive Testing**: Unit tests, E2E tests, and security validation
 
+### Code Quality Enforcement
+* **Automated Documentation**: Complete Google-style docstring coverage (0 pydocstyle errors)
+* **Code Formatting**: Black formatter with 100-character line length
+* **Comprehensive Linting**: Ruff for style, quality, and best practices
+* **Pre-commit Hooks**: Automatic quality checks on every commit
+* **CI/CD Pipeline**: GitHub Actions enforces standards on all PRs
+* **Zero Tolerance**: No code merged without passing all quality checks
+
 ## 🛠️ Development Setup
 
 ### Prerequisites
 - Python 3.9+
 - OpenAI API key
 - Twilio account with auth token
+- Git (for pre-commit hooks)
 
 ### Quick Start
 
@@ -39,15 +50,18 @@ cd whatspr-staging
 python -m venv env && source env/bin/activate
 pip install -r requirements.txt
 
+# Install pre-commit hooks for automated code quality
+pre-commit install
+
 # Configure environment (NEVER commit .env file!)
 cp .env.example .env
 # Edit .env and add your API keys:
 #   OPENAI_API_KEY=sk-your-key-here
 #   TWILIO_AUTH_TOKEN=your-32-char-token
 
-# Verify setup
+# Verify setup with complete quality checks
+./scripts/lint.sh                          # Runs all quality checks
 pytest tests/ -v                           # Should pass 28+ tests
-ruff check app tests                       # Should show no errors
 
 # Start development server
 uvicorn app.main:app --reload --port 8000
@@ -152,6 +166,12 @@ gcloud run deploy whatspr \
 
 ## 📚 Documentation
 
+### Core Documentation
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**: Complete development workflow and architecture guide
+- **[docs/ONBOARDING.md](docs/ONBOARDING.md)**: New developer onboarding and setup guide
+- **[docs/DOCUMENTATION_GUIDELINES.md](docs/DOCUMENTATION_GUIDELINES.md)**: Google-style docstring standards and enforcement
+
+### Project Documentation  
 - **[SECURITY.md](SECURITY.md)**: Security policies and incident response
 - **[FINAL_ACCEPTANCE_TEST.md](FINAL_ACCEPTANCE_TEST.md)**: Complete testing procedures
 - **[CLAUDE.md](CLAUDE.md)**: AI agent development guidelines
@@ -164,21 +184,28 @@ gcloud run deploy whatspr \
 # Create feature branch
 git checkout -b feat/your-feature-name
 
-# Make changes and test
-ruff check app tests && ruff format app tests
-pytest tests/ -v
+# Make changes with automatic quality enforcement
+# (pre-commit hooks run automatically on commit)
 
-# Commit with conventional commits
+# Manual quality check (recommended before committing)
+./scripts/lint.sh                          # Comprehensive quality check
+
+# Commit with conventional commits (triggers pre-commit hooks)
 git add .
 git commit -m "feat: add new feature description"
 git push -u origin feat/your-feature-name
 ```
 
 ### Code Quality Standards
-- All code must pass `ruff` linting
-- Test coverage required for new features
-- Security review for changes to authentication/validation
-- No secrets in repository (enforced by pre-commit hooks)
+- **Google-style docstrings**: Complete documentation coverage enforced via pydocstyle
+- **Automated formatting**: Black formatter with 100-character line length  
+- **Linting**: Ruff for code quality and style enforcement
+- **Pre-commit hooks**: Automatic quality checks before each commit
+- **CI/CD pipeline**: GitHub Actions enforces quality standards on all PRs
+- **Zero tolerance**: No PRs merged without passing all quality checks
+- **Test coverage**: Required for new features
+- **Security review**: Required for authentication/validation changes
+- **No secrets**: Enforced by pre-commit hooks and CI/CD
 
 ## 📄 License
 
