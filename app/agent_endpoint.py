@@ -144,11 +144,11 @@ async def run_thread_with_retry(
 
     # All attempts failed - handle gracefully
     elapsed = time.time() - start_time
-    
+
     # Enhanced error logging with more details
     error_summary = str(last_exception) if last_exception else "Unknown error"
     error_type = type(last_exception).__name__ if last_exception else "Unknown"
-    
+
     log.error(
         "ai_all_attempts_failed",
         attempts=MAX_RETRIES + 1,
