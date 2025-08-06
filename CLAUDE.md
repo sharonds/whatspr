@@ -83,3 +83,49 @@ When encountering similar issues, use these tools:
 4. **Tool Mapping**: Enhanced assistant prompt with explicit tool usage instructions
 
 This pattern prevents module import timing issues and ensures proper API key availability.
+
+## Rate Limiting for API Tests
+
+**Feature Implemented**: Added comprehensive rate limiting to all API test files to prevent quota exhaustion and improve test reliability.
+
+### Problem Solved
+Tests were occasionally failing due to hitting API rate limits, particularly OpenAI and Twilio quotas during automated testing and development.
+
+### Solution: Token Bucket Algorithm
+Implemented thread-safe rate limiting with configurable rates per service:
+
+```python
+# Service-specific rate limits
+OPENAI = {"calls_per_second": 0.5, "burst_size": 3}    # Conservative for OpenAI
+TWILIO = {"calls_per_second": 2.0, "burst_size": 10}   # More lenient for Twilio
+DEFAULT = {"calls_per_second": 1.0, "burst_size": 5}   # General purpose
+```
+
+### Key Components
+- **Rate Limiter Module**: `tests/utils/rate_limiter.py` with thread-safe token bucket implementation
+- **Decorators**: `@rate_limit_test` for easy test decoration
+- **Base Class**: `RateLimitedTestCase` for automatic rate limiting
+- **Service Configs**: Pre-configured limits for OpenAI, Twilio, and default services
+
+### Files With Rate Limiting Applied
+- All E2E test files (`tests/e2e/*.py`)
+- Reliability test suite (`tests/test_reliability.py`)
+- WhatsApp simulator (`tests/utils/sim_client.py`)
+- Rate limiting tests (`tests/test_rate_limiting.py`)
+
+### Usage Pattern
+```python
+class TestAPI(RateLimitedTestCase):
+    CALLS_PER_SECOND = 0.3
+    
+    def test_function(self):
+        response = self.make_api_call(lambda: client.request())
+```
+
+### Benefits
+1. **Test Reliability**: Prevents API quota failures during test execution
+2. **Cost Control**: Reduces unnecessary API usage during development
+3. **Staging Safety**: Protects against overwhelming production APIs
+4. **Thread Safety**: Supports concurrent test execution without race conditions
+
+This implementation ensures consistent test execution while protecting API quotas and improving overall development workflow reliability.

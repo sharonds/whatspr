@@ -10,6 +10,7 @@ import time
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
+from tests.utils.rate_limiter import RateLimitedTestCase
 
 
 def has_valid_api_key():
@@ -19,11 +20,16 @@ def has_valid_api_key():
 
 
 @pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")
-class TestTimeoutHandling:
+class TestTimeoutHandling(RateLimitedTestCase):
     """Test timeout scenarios and performance monitoring."""
 
-    def setup_method(self):
-        """Set up test environment."""
+    # Configure rate limiting for timeout tests
+    CALLS_PER_SECOND = 0.2  # 1 call every 5 seconds for timeout tests
+    BURST_SIZE = 1  # Minimal burst for timeout testing
+
+    def setup_method(self, method):
+        """Set up test environment and rate limiting."""
+        super().setup_method(method)
         self.client = TestClient(app)
         self.test_phone = "+15551234567"
 
@@ -40,11 +46,14 @@ class TestTimeoutHandling:
 
         try:
             # Set a timeout slightly less than Twilio's limit
-            response = self.client.post(
-                "/agent",
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                data=data,
-                timeout=timeout_seconds,
+            # Apply rate limiting for API calls
+            response = self.make_api_call(
+                lambda: self.client.post(
+                    "/agent",
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    data=data,
+                    timeout=timeout_seconds,
+                )
             )
             duration = time.time() - start_time
             return response, duration, None

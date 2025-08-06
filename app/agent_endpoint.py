@@ -12,13 +12,21 @@ from .agent_runtime import run_thread, ATOMIC_FUNCS
 from .prefilter import clean_message, twiml
 from .validator_tool import validate_local
 from . import tools_atomic as tools
+from .session_manager import SessionManager
+from .session_config.session_config import SessionConfig
 import structlog
 from typing import Dict, Optional, Tuple, List
 
 router = APIRouter()
 log = structlog.get_logger("agent")
 
+# Feature flag for session manager rollout
+USE_SESSION_MANAGER = True  # Set to False to use legacy _sessions dict
+
 _sessions: Dict[str, Optional[str]] = {}  # phone -> thread_id (None until first message)
+
+# Initialize session manager
+session_manager = SessionManager(SessionConfig())
 
 # Maximum time to spend on AI processing (Twilio timeout is ~15-20s)
 # Increased to accommodate tool-heavy workflows that can take 20+ seconds
@@ -250,13 +258,19 @@ async def agent_hook(request: Request):
     if clean.lower() in ["reset", "restart", "start over", "menu", "start"]:
         log.info("session_reset", phone_hash=phone[-4:] if phone else "none")
         # Clear session, thread will be created lazily when needed
-        _sessions[phone] = None
+        if USE_SESSION_MANAGER:
+            session_manager.remove_session(phone)
+        else:
+            _sessions[phone] = None
         return twiml(
             "👋 Hi! What kind of announcement?\n  Press 1 for Funding round\n  Press 2 for Product launch\n  Press 3 for Partnership / integration"
         )
 
     # Get thread_id (may be None for new sessions)
-    thread_id = _sessions.get(phone)
+    if USE_SESSION_MANAGER:
+        thread_id = session_manager.get_session(phone)
+    else:
+        thread_id = _sessions.get(phone)
 
     # Pre-process numeric menu selections
     if clean.strip() in ["1", "1️⃣"]:
@@ -279,7 +293,10 @@ async def agent_hook(request: Request):
 
         # Only update session if we have a valid thread_id
         if thread_id and thread_id.strip():
-            _sessions[phone] = thread_id
+            if USE_SESSION_MANAGER:
+                session_manager.set_session(phone, thread_id)
+            else:
+                _sessions[phone] = thread_id
         else:
             log.error(
                 "invalid_thread_id_returned",

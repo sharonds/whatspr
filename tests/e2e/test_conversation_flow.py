@@ -10,6 +10,7 @@ import os
 import re
 from fastapi.testclient import TestClient
 from app.main import app
+from tests.utils.rate_limiter import RateLimitedTestCase, rate_limit_test
 
 
 def has_valid_api_key():
@@ -28,22 +29,30 @@ def extract_message_content(response_text):
 
 
 @pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")
-class TestHappyPathConversation:
+class TestHappyPathConversation(RateLimitedTestCase):
     """Test the core happy path conversation flow."""
 
-    def setup_method(self):
-        """Set up test client."""
+    # Configure rate limiting for OpenAI API calls
+    CALLS_PER_SECOND = 0.3  # ~1 call every 3 seconds
+    BURST_SIZE = 2  # Allow 2 calls in quick succession
+
+    def setup_method(self, method):
+        """Set up test client and rate limiting."""
+        super().setup_method(method)
         self.client = TestClient(app)
 
     def _send_message(self, body, phone="+12345678901"):
-        """Send a message to the agent endpoint."""
-        response = self.client.post(
-            "/agent",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data=f"From={phone}&Body={body}",
+        """Send a message to the agent endpoint with rate limiting."""
+        # Apply rate limiting to API calls
+        return self.make_api_call(
+            lambda: self.client.post(
+                "/agent",
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                data=f"From={phone}&Body={body}",
+            )
         )
-        return response
 
+    @rate_limit_test(calls_per_second=0.3, burst_size=2)
     def test_natural_conversation_flow(self):
         """Verify agent maintains natural, conversational responses throughout."""
         self._send_message("reset")

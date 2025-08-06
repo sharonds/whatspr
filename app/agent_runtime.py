@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Tuple, Optional
 
 from openai import OpenAI
 from openai.types.beta import Thread, Assistant
+from .timeout_config import timeout_manager
 
 log = logging.getLogger("whatspr.agent")
 
@@ -156,7 +157,17 @@ def _get_or_create_assistant() -> str:
     return assistant.id
 
 
-ASSISTANT_ID = _get_or_create_assistant()
+# Lazy initialization to prevent API calls during module import
+_assistant_id = None
+
+
+def get_assistant_id() -> str:
+    """Get or create the assistant ID lazily."""
+    global _assistant_id
+    if _assistant_id is None:
+        _assistant_id = _get_or_create_assistant()
+    return _assistant_id
+
 
 # ---------- helper API ----------
 
@@ -211,14 +222,14 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     # 2. kick off a run
     run = get_client().beta.threads.runs.create(
         thread_id=thread_id,
-        assistant_id=ASSISTANT_ID,
+        assistant_id=get_assistant_id(),
         # No instructions override: already baked into the assistant.
-        timeout=10,  # server-side request timeout
+        timeout=timeout_manager.config.openai_request_timeout,  # server-side request timeout
     )
 
     # 3. poll with exponential back-off and handle tool calls
-    delay = 0.5
-    max_attempts = 20  # Prevent infinite loops
+    delay = timeout_manager.config.polling_base_delay
+    max_attempts = timeout_manager.config.polling_max_attempts  # Prevent infinite loops
     attempts = 0
     tool_calls_made = []  # Track tool calls for return value
 
@@ -289,7 +300,7 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
         else:
             # Still running, wait and try again
             time.sleep(delay)
-            delay = min(delay * 2, 4)
+            delay = min(delay * 2, timeout_manager.config.polling_max_delay)
 
     if attempts >= max_attempts:
         raise RuntimeError(f"Run {run.id} timed out after {max_attempts} attempts")
