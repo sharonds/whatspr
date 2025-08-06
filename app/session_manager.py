@@ -83,7 +83,7 @@ class SessionManager:
                 "session_expired_on_access",
                 phone_hash=phone[-4:] if phone else "unknown",
                 thread_id_prefix=entry.thread_id[:10],
-                age_minutes=round((datetime.now() - entry.last_accessed).total_seconds() / 60, 1)
+                age_minutes=round((datetime.now() - entry.last_accessed).total_seconds() / 60, 1),
             )
             self._remove_session_entry(phone)
             return None
@@ -91,20 +91,24 @@ class SessionManager:
         # Update last accessed time and log successful access
         old_last_accessed = entry.last_accessed
         entry.last_accessed = datetime.now()
-        
+
         # Log session access with useful metrics for MVP monitoring
-        session_age_minutes = round((entry.last_accessed - entry.created_at).total_seconds() / 60, 1)
-        time_since_last_access = round((entry.last_accessed - old_last_accessed).total_seconds() / 60, 1)
-        
+        session_age_minutes = round(
+            (entry.last_accessed - entry.created_at).total_seconds() / 60, 1
+        )
+        time_since_last_access = round(
+            (entry.last_accessed - old_last_accessed).total_seconds() / 60, 1
+        )
+
         log.debug(
             "session_accessed",
             phone_hash=phone[-4:] if phone else "unknown",
             thread_id_prefix=entry.thread_id[:10],
             session_age_minutes=session_age_minutes,
             minutes_since_last_access=time_since_last_access,
-            total_active_sessions=len(self._sessions)
+            total_active_sessions=len(self._sessions),
         )
-        
+
         return entry.thread_id
 
     def set_session(self, phone: str, thread_id: str) -> None:
@@ -131,14 +135,14 @@ class SessionManager:
                 phone_hash=phone[-4:] if phone else "unknown",
                 thread_id_prefix=thread_id[:10],
                 total_sessions_created=self._total_sessions_created,
-                current_active_sessions=len(self._sessions)
+                current_active_sessions=len(self._sessions),
             )
         else:
             log.info(
                 "session_updated",
-                phone_hash=phone[-4:] if phone else "unknown", 
+                phone_hash=phone[-4:] if phone else "unknown",
                 new_thread_id_prefix=thread_id[:10],
-                current_active_sessions=len(self._sessions)
+                current_active_sessions=len(self._sessions),
             )
 
     def remove_session(self, phone: str) -> bool:
@@ -167,11 +171,13 @@ class SessionManager:
                 expired_phones.append(phone)
                 # Collect details for enhanced logging
                 age_minutes = round((cleanup_start - entry.last_accessed).total_seconds() / 60, 1)
-                expired_details.append({
-                    'phone_hash': phone[-4:] if phone else "unknown",
-                    'thread_id_prefix': entry.thread_id[:10],
-                    'age_minutes': age_minutes
-                })
+                expired_details.append(
+                    {
+                        'phone_hash': phone[-4:] if phone else "unknown",
+                        'thread_id_prefix': entry.thread_id[:10],
+                        'age_minutes': age_minutes,
+                    }
+                )
 
         # Remove expired sessions
         for phone in expired_phones:
@@ -189,16 +195,13 @@ class SessionManager:
                 remaining_count=len(self._sessions),
                 cleanup_duration_ms=round(cleanup_duration * 1000, 1),
                 total_expired_lifetime=self._total_sessions_expired,
-                memory_estimate_bytes=self.estimate_memory_usage()
+                memory_estimate_bytes=self.estimate_memory_usage(),
             )
-            
+
             # Log details of expired sessions for debugging
             if len(expired_details) <= 5:  # Only log details for small cleanups
                 for detail in expired_details:
-                    log.debug(
-                        "session_expired_detail",
-                        **detail
-                    )
+                    log.debug("session_expired_detail", **detail)
             else:
                 # For large cleanups, log summary statistics
                 avg_age = sum(d['age_minutes'] for d in expired_details) / len(expired_details)
@@ -207,14 +210,14 @@ class SessionManager:
                     "session_cleanup_summary",
                     expired_count=len(expired_details),
                     avg_age_minutes=round(avg_age, 1),
-                    max_age_minutes=round(max_age, 1)
+                    max_age_minutes=round(max_age, 1),
                 )
         else:
             # Log even when no cleanup needed for monitoring heartbeat
             log.debug(
                 "session_cleanup_no_action",
                 active_sessions=len(self._sessions),
-                cleanup_duration_ms=round(cleanup_duration * 1000, 1)
+                cleanup_duration_ms=round(cleanup_duration * 1000, 1),
             )
 
         return len(expired_phones)

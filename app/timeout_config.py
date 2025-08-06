@@ -184,6 +184,7 @@ class TimeoutManager:
             try:
                 # Check if we have an environment profile setting
                 import os
+
                 profile = os.environ.get("ENVIRONMENT")
                 if profile and profile in ['development', 'staging', 'production']:
                     self.config = TimeoutConfig.for_profile(profile)
