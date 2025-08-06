@@ -14,6 +14,7 @@ from .validator_tool import validate_local
 from . import tools_atomic as tools
 from .session_manager import SessionManager
 from .session_config.session_config import SessionConfig
+from .timeout_config import timeout_manager
 import structlog
 from typing import Dict, Optional, Tuple, List
 
@@ -28,14 +29,27 @@ _sessions: Dict[str, Optional[str]] = {}  # phone -> thread_id (None until first
 # Initialize session manager
 session_manager = SessionManager(SessionConfig())
 
-# Maximum time to spend on AI processing (Twilio timeout is ~15-20s)
-# Increased to accommodate tool-heavy workflows that can take 20+ seconds
-MAX_AI_PROCESSING_TIME = 25.0  # Leave 5s buffer for request/response overhead
 
-# Retry configuration optimized for tool-heavy workflows
-MAX_RETRIES = 1  # Total of 2 attempts (1 initial + 1 retry) - give more time per attempt
-RETRY_BASE_DELAY = 0.5  # Base delay in seconds
-RETRY_MAX_DELAY = 2.0  # Maximum delay between retries
+# Timeout configuration now centralized through timeout_manager
+# These getter functions provide backward compatibility and centralized config access
+def get_max_ai_processing_time() -> float:
+    """Get maximum AI processing time from centralized config."""
+    return timeout_manager.config.ai_processing_timeout
+
+
+def get_max_retries() -> int:
+    """Get maximum retry attempts from centralized config."""
+    return timeout_manager.config.retry_max_attempts
+
+
+def get_retry_base_delay() -> float:
+    """Get retry base delay from centralized config."""
+    return timeout_manager.config.retry_base_delay
+
+
+def get_retry_max_delay() -> float:
+    """Get retry maximum delay from centralized config."""
+    return timeout_manager.config.retry_max_delay
 
 
 async def run_single_attempt(
@@ -61,25 +75,30 @@ async def run_single_attempt(
 
 
 async def run_thread_with_retry(
-    thread_id: Optional[str], user_msg: str, timeout_seconds: float = MAX_AI_PROCESSING_TIME
+    thread_id: Optional[str], user_msg: str, timeout_seconds: float = None
 ) -> Tuple[str, str, List[dict]]:
     """Run thread with retry logic and timeout protection.
 
     Args:
         thread_id: Optional thread ID for conversation continuation.
         user_msg: User message to process.
-        timeout_seconds: Maximum time to wait for response.
+        timeout_seconds: Maximum time to wait for response. If None, uses default from config.
 
     Returns:
         Tuple of (reply, thread_id, tool_calls) or fallback response on failure.
     """
+    # Use centralized timeout configuration
+    if timeout_seconds is None:
+        timeout_seconds = get_max_ai_processing_time()
+
     start_time = time.time()
     last_exception = None
+    max_retries = get_max_retries()
 
     # Calculate per-attempt timeout (reserve time for retries)
-    per_attempt_timeout = timeout_seconds / (MAX_RETRIES + 1)
+    per_attempt_timeout = timeout_seconds / (max_retries + 1)
 
-    for attempt in range(MAX_RETRIES + 1):  # 0, 1, 2 (3 total attempts)
+    for attempt in range(max_retries + 1):
         try:
             # Adjust timeout for remaining time
             remaining_time = timeout_seconds - (time.time() - start_time)
@@ -94,7 +113,7 @@ async def run_thread_with_retry(
             log.info(
                 "ai_attempt_start",
                 attempt=attempt + 1,
-                max_attempts=MAX_RETRIES + 1,
+                max_attempts=max_retries + 1,
                 attempt_timeout=attempt_timeout,
             )
 
@@ -137,9 +156,12 @@ async def run_thread_with_retry(
             )
 
         # Don't retry on the last attempt
-        if attempt < MAX_RETRIES:
+        if attempt < max_retries:
             # Calculate exponential backoff delay with jitter
-            delay = min(RETRY_BASE_DELAY * (2**attempt) + random.uniform(0, 0.1), RETRY_MAX_DELAY)
+            delay = min(
+                get_retry_base_delay() * (2**attempt) + random.uniform(0, 0.1),
+                get_retry_max_delay(),
+            )
 
             # Check if we have time for delay + another attempt
             remaining_time = timeout_seconds - (time.time() - start_time)
@@ -159,14 +181,14 @@ async def run_thread_with_retry(
 
     log.error(
         "ai_all_attempts_failed",
-        attempts=MAX_RETRIES + 1,
+        attempts=max_retries + 1,
         elapsed_seconds=elapsed,
         final_error=error_summary,
         final_error_type=error_type,
         user_msg=user_msg[:100],
         # Additional debugging info
         timeout_seconds=timeout_seconds,
-        per_attempt_timeout=timeout_seconds / (MAX_RETRIES + 1),
+        per_attempt_timeout=timeout_seconds / (max_retries + 1),
     )
 
     # Create thread if needed but preserve existing thread_id on failure
