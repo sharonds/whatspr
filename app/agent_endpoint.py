@@ -278,12 +278,27 @@ async def agent_hook(request: Request):
 
     # Handle reset commands
     if clean.lower() in ["reset", "restart", "start over", "menu", "start"]:
-        log.info("session_reset", phone_hash=phone[-4:] if phone else "none")
-        # Clear session, thread will be created lazily when needed
+        # Enhanced reset logging for MVP user tracking
         if USE_SESSION_MANAGER:
+            existing_session = session_manager.get_session(phone)
             session_manager.remove_session(phone)
+            log.info(
+                "session_reset_requested",
+                phone_hash=phone[-4:] if phone else "none",
+                had_existing_session=existing_session is not None,
+                existing_thread_prefix=existing_session[:10] if existing_session else None,
+                reset_command=clean.lower(),
+                total_active_sessions=session_manager.get_session_count()
+            )
         else:
+            existing_thread = _sessions.get(phone)
             _sessions[phone] = None
+            log.info(
+                "session_reset_requested_legacy",
+                phone_hash=phone[-4:] if phone else "none",
+                had_existing_session=existing_thread is not None,
+                reset_command=clean.lower()
+            )
         return twiml(
             "👋 Hi! What kind of announcement?\n  Press 1 for Funding round\n  Press 2 for Product launch\n  Press 3 for Partnership / integration"
         )
@@ -304,11 +319,21 @@ async def agent_hook(request: Request):
 
     try:
         request_start_time = time.time()
-        log.info(
-            "debug_request",
-            phone_hash=phone[-4:] if phone else "none",
-            body_length=len(clean),
-        )
+        
+        # Enhanced conversation flow logging for MVP user tracking
+        conversation_context = {
+            "phone_hash": phone[-4:] if phone else "none",
+            "message_length": len(clean),
+            "has_existing_session": thread_id is not None,
+            "existing_thread_prefix": thread_id[:10] if thread_id else None,
+            "is_menu_selection": clean.strip() in ["1", "1️⃣", "2", "2️⃣", "3", "3️⃣"],
+            "message_preview": clean[:50] + "..." if len(clean) > 50 else clean
+        }
+        
+        if USE_SESSION_MANAGER:
+            conversation_context["total_active_sessions"] = session_manager.get_session_count()
+        
+        log.info("conversation_message_received", **conversation_context)
 
         # Use retry-enabled AI processing with timeout protection
         reply, thread_id, tool_calls = await run_thread_with_retry(thread_id, clean)
@@ -327,24 +352,95 @@ async def agent_hook(request: Request):
             )
 
         processing_time = time.time() - request_start_time
-        log.info(
-            "debug_response",
-            reply_length=len(reply),
-            tool_count=len(tool_calls),
-            total_time=processing_time,
-        )
+        
+        # Enhanced response logging with conversation flow insights
+        response_context = {
+            "reply_length": len(reply),
+            "tool_count": len(tool_calls),
+            "processing_time_seconds": round(processing_time, 3),
+            "phone_hash": phone[-4:] if phone else "none",
+            "thread_id_prefix": thread_id[:10] if thread_id else None,
+            "reply_preview": reply[:100] + "..." if len(reply) > 100 else reply
+        }
+        
+        if USE_SESSION_MANAGER:
+            response_context["total_active_sessions_after"] = session_manager.get_session_count()
+        
+        # Add tool call details for press release flow tracking
+        if tool_calls:
+            tool_names = [call.get("name", "unknown") for call in tool_calls]
+            response_context["tools_called"] = tool_names
+            
+            # Track press release progress
+            atomic_tools_used = [name for name in tool_names if name in ATOMIC_FUNCS]
+            if atomic_tools_used:
+                response_context["pr_tools_used"] = atomic_tools_used
+        
+        log.info("conversation_message_processed", **response_context)
 
-        # Handle tool calls using dispatch table
+        # Handle tool calls using dispatch table with enhanced logging
         for call in tool_calls:
             call_dict = dict(call)  # Ensure proper dict type for type checker
-            if call_dict.get("name") in TOOL_DISPATCH:
-                TOOL_DISPATCH[call_dict["name"]](**call_dict.get("arguments", {}))
-                log.info("tool_executed", name=call_dict["name"])
+            tool_name = call_dict.get("name", "unknown")
+            
+            if tool_name in TOOL_DISPATCH:
+                try:
+                    tool_result = TOOL_DISPATCH[tool_name](**call_dict.get("arguments", {}))
+                    
+                    # Enhanced tool execution logging for MVP press release flow tracking
+                    log.info(
+                        "tool_executed_success",
+                        tool_name=tool_name,
+                        phone_hash=phone[-4:] if phone else "none",
+                        thread_id_prefix=thread_id[:10] if thread_id else None,
+                        is_atomic_tool=tool_name in ATOMIC_FUNCS,
+                        tool_arguments_count=len(call_dict.get("arguments", {}))
+                    )
+                    
+                    # Track press release completion progress
+                    if tool_name in ATOMIC_FUNCS:
+                        log.info(
+                            "pr_data_saved",
+                            data_type=tool_name,
+                            phone_hash=phone[-4:] if phone else "none",
+                            thread_id_prefix=thread_id[:10] if thread_id else None
+                        )
+                    elif tool_name == "finish":
+                        log.info(
+                            "pr_completion",
+                            phone_hash=phone[-4:] if phone else "none",
+                            thread_id_prefix=thread_id[:10] if thread_id else None,
+                            total_tools_used=len(tool_calls)
+                        )
+                        
+                except Exception as tool_error:
+                    log.error(
+                        "tool_execution_failed",
+                        tool_name=tool_name,
+                        phone_hash=phone[-4:] if phone else "none",
+                        error=str(tool_error),
+                        error_type=type(tool_error).__name__
+                    )
             else:
-                log.warning("unknown_tool", name=call_dict.get("name", "unknown"))
+                log.warning(
+                    "unknown_tool_called",
+                    tool_name=tool_name,
+                    phone_hash=phone[-4:] if phone else "none",
+                    available_tools=list(TOOL_DISPATCH.keys())[:5]  # First 5 for log size
+                )
 
     except Exception as e:
-        log.error("agent_error", error=str(e), error_type=type(e).__name__, exc_info=True)
+        # Enhanced error logging for MVP debugging
+        log.error(
+            "conversation_processing_failed",
+            error=str(e),
+            error_type=type(e).__name__, 
+            phone_hash=phone[-4:] if phone else "none",
+            message_preview=clean[:50] if clean else "none",
+            had_session=thread_id is not None,
+            processing_time=round(time.time() - request_start_time, 3) if 'request_start_time' in locals() else None,
+            exc_info=True
+        )
         return twiml("Oops, temporary error. Try again.")
     return twiml(reply)
 
@@ -363,3 +459,142 @@ async def whatsapp_hook(request: Request):
         Response: TwiML response from agent_hook.
     """
     return await agent_hook(request)
+
+
+@router.get("/health/sessions")
+async def sessions_health():
+    """Session monitoring endpoint for MVP health checks.
+    
+    Provides basic session metrics and health information for monitoring
+    the SessionManager during MVP deployment with real users.
+    
+    Returns:
+        dict: Session health metrics and status information.
+    """
+    if USE_SESSION_MANAGER:
+        metrics = session_manager.get_metrics()
+        
+        # Add health indicators
+        health_status = "healthy"
+        warnings = []
+        
+        # Check for potential issues
+        if metrics['active_sessions'] > 50:  # High for MVP
+            warnings.append("High session count for MVP deployment")
+            health_status = "warning"
+            
+        if metrics['estimated_memory_bytes'] > 100000:  # 100KB threshold
+            warnings.append("High memory usage for session storage")
+            health_status = "warning"
+        
+        return {
+            "status": health_status,
+            "session_manager": {
+                "enabled": True,
+                "metrics": metrics,
+                "warnings": warnings
+            },
+            "timestamp": time.time()
+        }
+    else:
+        # Legacy mode metrics
+        active_legacy_sessions = len([v for v in _sessions.values() if v is not None])
+        return {
+            "status": "legacy",
+            "session_manager": {
+                "enabled": False,
+                "legacy_active_sessions": active_legacy_sessions,
+                "legacy_total_entries": len(_sessions)
+            },
+            "timestamp": time.time()
+        }
+
+
+@router.get("/health/sessions/details")
+async def sessions_details():
+    """Detailed session information for debugging (MVP safe).
+    
+    Provides detailed session information while protecting user privacy
+    by hashing phone numbers and showing only last 4 characters.
+    
+    Returns:
+        dict: Detailed session information for debugging.
+    """
+    if not USE_SESSION_MANAGER:
+        return {"error": "Session manager not enabled", "status": "legacy"}
+    
+    # Get metrics and add computed values
+    metrics = session_manager.get_metrics()
+    
+    # Calculate session age distribution (approximate)
+    current_time = time.time()
+    session_details = []
+    
+    for phone, entry in session_manager._sessions.items():
+        # Protect privacy with phone hash
+        phone_hash = phone[-4:] if len(phone) >= 4 else "****"
+        
+        created_ago = (current_time - entry.created_at.timestamp()) / 60  # minutes
+        accessed_ago = (current_time - entry.last_accessed.timestamp()) / 60  # minutes
+        
+        session_details.append({
+            "phone_hash": phone_hash,
+            "thread_id_prefix": entry.thread_id[:10] + "..." if len(entry.thread_id) > 10 else entry.thread_id,
+            "created_minutes_ago": round(created_ago, 1),
+            "last_accessed_minutes_ago": round(accessed_ago, 1),
+            "is_near_expiry": accessed_ago > (session_manager.config.ttl_seconds / 60) * 0.8  # 80% of TTL
+        })
+    
+    # Sort by most recently accessed
+    session_details.sort(key=lambda x: x["last_accessed_minutes_ago"])
+    
+    return {
+        "overview": metrics,
+        "config": {
+            "ttl_minutes": session_manager.config.ttl_seconds / 60,
+            "cleanup_interval_seconds": session_manager.config.cleanup_interval
+        },
+        "sessions": session_details[:20],  # Limit to 20 most recent for MVP
+        "total_sessions_shown": min(len(session_details), 20),
+        "timestamp": current_time
+    }
+
+
+@router.post("/health/sessions/cleanup")
+async def force_session_cleanup():
+    """Force session cleanup for MVP monitoring and debugging.
+    
+    Manually triggers session cleanup and returns results.
+    Useful for testing cleanup behavior during MVP deployment.
+    
+    Returns:
+        dict: Cleanup results and updated metrics.
+    """
+    if not USE_SESSION_MANAGER:
+        return {"error": "Session manager not enabled", "status": "legacy"}
+    
+    # Capture before state
+    before_metrics = session_manager.get_metrics()
+    
+    # Run cleanup
+    cleanup_start = time.time()
+    removed_count = session_manager.cleanup_expired_sessions()
+    cleanup_duration = time.time() - cleanup_start
+    
+    # Capture after state
+    after_metrics = session_manager.get_metrics()
+    
+    return {
+        "cleanup_results": {
+            "removed_sessions": removed_count,
+            "cleanup_duration_ms": round(cleanup_duration * 1000, 2),
+            "before_active_sessions": before_metrics['active_sessions'],
+            "after_active_sessions": after_metrics['active_sessions']
+        },
+        "metrics_change": {
+            "sessions_delta": after_metrics['active_sessions'] - before_metrics['active_sessions'],
+            "memory_delta_bytes": after_metrics['estimated_memory_bytes'] - before_metrics['estimated_memory_bytes']
+        },
+        "current_metrics": after_metrics,
+        "timestamp": time.time()
+    }

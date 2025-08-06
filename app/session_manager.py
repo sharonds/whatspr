@@ -74,15 +74,37 @@ class SessionManager:
 
         entry = self._sessions.get(phone)
         if entry is None:
+            log.debug("session_not_found", phone_hash=phone[-4:] if phone else "unknown")
             return None
 
         # Check if session has expired
         if self._is_expired(entry):
+            log.info(
+                "session_expired_on_access",
+                phone_hash=phone[-4:] if phone else "unknown",
+                thread_id_prefix=entry.thread_id[:10],
+                age_minutes=round((datetime.now() - entry.last_accessed).total_seconds() / 60, 1)
+            )
             self._remove_session_entry(phone)
             return None
 
-        # Update last accessed time
+        # Update last accessed time and log successful access
+        old_last_accessed = entry.last_accessed
         entry.last_accessed = datetime.now()
+        
+        # Log session access with useful metrics for MVP monitoring
+        session_age_minutes = round((entry.last_accessed - entry.created_at).total_seconds() / 60, 1)
+        time_since_last_access = round((entry.last_accessed - old_last_accessed).total_seconds() / 60, 1)
+        
+        log.debug(
+            "session_accessed",
+            phone_hash=phone[-4:] if phone else "unknown",
+            thread_id_prefix=entry.thread_id[:10],
+            session_age_minutes=session_age_minutes,
+            minutes_since_last_access=time_since_last_access,
+            total_active_sessions=len(self._sessions)
+        )
+        
         return entry.thread_id
 
     def set_session(self, phone: str, thread_id: str) -> None:
@@ -95,13 +117,29 @@ class SessionManager:
             thread_id: OpenAI thread ID to associate with phone.
         """
         now = datetime.now()
+        is_new_session = phone not in self._sessions
 
-        if phone not in self._sessions:
+        if is_new_session:
             self._total_sessions_created += 1
 
         self._sessions[phone] = SessionEntry(thread_id=thread_id, created_at=now, last_accessed=now)
 
-        log.debug("session_set", phone_hash=phone[-4:], thread_id=thread_id[:20])
+        # Enhanced logging for MVP user tracking
+        if is_new_session:
+            log.info(
+                "session_created",
+                phone_hash=phone[-4:] if phone else "unknown",
+                thread_id_prefix=thread_id[:10],
+                total_sessions_created=self._total_sessions_created,
+                current_active_sessions=len(self._sessions)
+            )
+        else:
+            log.info(
+                "session_updated",
+                phone_hash=phone[-4:] if phone else "unknown", 
+                new_thread_id_prefix=thread_id[:10],
+                current_active_sessions=len(self._sessions)
+            )
 
     def remove_session(self, phone: str) -> bool:
         """Remove session for phone number.
@@ -120,25 +158,63 @@ class SessionManager:
         Returns:
             int: Number of sessions removed.
         """
-        now = datetime.now()
+        cleanup_start = datetime.now()
         expired_phones = []
+        expired_details = []
 
         for phone, entry in self._sessions.items():
             if self._is_expired(entry):
                 expired_phones.append(phone)
+                # Collect details for enhanced logging
+                age_minutes = round((cleanup_start - entry.last_accessed).total_seconds() / 60, 1)
+                expired_details.append({
+                    'phone_hash': phone[-4:] if phone else "unknown",
+                    'thread_id_prefix': entry.thread_id[:10],
+                    'age_minutes': age_minutes
+                })
 
         # Remove expired sessions
         for phone in expired_phones:
             self._remove_session_entry(phone)
 
         self._total_sessions_expired += len(expired_phones)
-        self._last_cleanup = now
+        self._last_cleanup = cleanup_start
+        cleanup_duration = (datetime.now() - cleanup_start).total_seconds()
 
+        # Enhanced cleanup logging for MVP monitoring
         if expired_phones:
             log.info(
                 "session_cleanup_completed",
                 removed_count=len(expired_phones),
                 remaining_count=len(self._sessions),
+                cleanup_duration_ms=round(cleanup_duration * 1000, 1),
+                total_expired_lifetime=self._total_sessions_expired,
+                memory_estimate_bytes=self.estimate_memory_usage()
+            )
+            
+            # Log details of expired sessions for debugging
+            if len(expired_details) <= 5:  # Only log details for small cleanups
+                for detail in expired_details:
+                    log.debug(
+                        "session_expired_detail",
+                        **detail
+                    )
+            else:
+                # For large cleanups, log summary statistics
+                avg_age = sum(d['age_minutes'] for d in expired_details) / len(expired_details)
+                max_age = max(d['age_minutes'] for d in expired_details)
+                log.debug(
+                    "session_cleanup_summary",
+                    expired_count=len(expired_details),
+                    avg_age_minutes=round(avg_age, 1),
+                    max_age_minutes=round(max_age, 1)
+                )
+        else:
+            # Log even when no cleanup needed for monitoring heartbeat
+            log.debug(
+                "session_cleanup_no_action",
+                active_sessions=len(self._sessions),
+                cleanup_duration_ms=round(cleanup_duration * 1000, 1)
             )
 
         return len(expired_phones)
