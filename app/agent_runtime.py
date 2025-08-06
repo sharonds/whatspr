@@ -230,37 +230,87 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     """
     from .validator_tool import validate_local
 
+    # Start performance timing
+    total_start_time = time.time()
+    thread_creation_time = 0
+    cancel_runs_time = 0
+
     # Lazy thread creation - only create when actually needed
     if thread_id is None:
+        thread_start = time.time()
         thread_id = create_thread()
+        thread_creation_time = time.time() - thread_start
+        log.info(
+            "performance_thread_created",
+            thread_id_prefix=thread_id[:10],
+            creation_time_ms=round(thread_creation_time * 1000, 2),
+        )
     else:
         # Cancel any active runs to prevent race conditions
+        cancel_start = time.time()
         cancel_active_runs(thread_id)
+        cancel_runs_time = time.time() - cancel_start
+        log.debug(
+            "performance_cancel_runs",
+            thread_id_prefix=thread_id[:10],
+            cancel_time_ms=round(cancel_runs_time * 1000, 2),
+        )
 
     # 1. append user message
+    message_start = time.time()
     get_client().beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
         content=user_msg,
     )
+    message_creation_time = time.time() - message_start
+    log.debug(
+        "performance_message_created",
+        thread_id_prefix=thread_id[:10],
+        message_length=len(user_msg),
+        creation_time_ms=round(message_creation_time * 1000, 2),
+    )
 
     # 2. kick off a run
+    run_start = time.time()
     run = get_client().beta.threads.runs.create(
         thread_id=thread_id,
         assistant_id=get_assistant_id(),
         # No instructions override: already baked into the assistant.
         timeout=timeout_manager.config.openai_request_timeout,  # server-side request timeout
     )
+    run_creation_time = time.time() - run_start
+    log.info(
+        "performance_run_created",
+        thread_id_prefix=thread_id[:10],
+        run_id_prefix=run.id[:10],
+        creation_time_ms=round(run_creation_time * 1000, 2),
+    )
 
     # 3. poll with exponential back-off and handle tool calls
+    polling_start = time.time()
     delay = timeout_manager.config.polling_base_delay
     max_attempts = timeout_manager.config.polling_max_attempts  # Prevent infinite loops
     attempts = 0
     tool_calls_made = []  # Track tool calls for return value
+    total_poll_time = 0
+    total_sleep_time = 0
 
     while attempts < max_attempts:
         attempts += 1
+        poll_attempt_start = time.time()
         run = get_client().beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        poll_attempt_time = time.time() - poll_attempt_start
+        total_poll_time += poll_attempt_time
+
+        log.debug(
+            "performance_poll_attempt",
+            thread_id_prefix=thread_id[:10],
+            run_id_prefix=run.id[:10],
+            attempt=attempts,
+            status=run.status,
+            attempt_time_ms=round(poll_attempt_time * 1000, 2),
+        )
 
         if run.status == "completed":
             break
@@ -324,19 +374,54 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
                 )
         else:
             # Still running, wait and try again
+            sleep_start = time.time()
             time.sleep(delay)
+            sleep_time = time.time() - sleep_start
+            total_sleep_time += sleep_time
             delay = min(delay * 2, timeout_manager.config.polling_max_delay)
+
+            log.debug(
+                "performance_polling_sleep",
+                thread_id_prefix=thread_id[:10],
+                sleep_time_ms=round(sleep_time * 1000, 2),
+                next_delay=delay,
+            )
 
     if attempts >= max_attempts:
         raise RuntimeError(f"Run {run.id} timed out after {max_attempts} attempts")
 
     # 4. fetch last assistant message (sorted by created_at desc)
+    message_fetch_start = time.time()
     msgs = get_client().beta.threads.messages.list(thread_id=thread_id, limit=5)
     assistant_msg = next((m for m in msgs.data if m.role == "assistant"), None)
     reply_text = (
         assistant_msg.content[0].text.value
         if assistant_msg and hasattr(assistant_msg.content[0], "text")
         else "[No response]"
+    )
+    message_fetch_time = time.time() - message_fetch_start
+
+    # Calculate comprehensive timing metrics
+    total_time = time.time() - total_start_time
+    polling_total_time = time.time() - polling_start
+
+    # Log comprehensive performance summary
+    log.info(
+        "performance_run_thread_complete",
+        thread_id_prefix=thread_id[:10],
+        total_time_ms=round(total_time * 1000, 2),
+        thread_creation_ms=round(thread_creation_time * 1000, 2),
+        cancel_runs_ms=round(cancel_runs_time * 1000, 2),
+        message_creation_ms=round(message_creation_time * 1000, 2),
+        run_creation_ms=round(run_creation_time * 1000, 2),
+        polling_total_ms=round(polling_total_time * 1000, 2),
+        polling_api_calls_ms=round(total_poll_time * 1000, 2),
+        polling_sleep_ms=round(total_sleep_time * 1000, 2),
+        message_fetch_ms=round(message_fetch_time * 1000, 2),
+        polling_attempts=attempts,
+        tool_calls_count=len(tool_calls_made),
+        reply_length=len(reply_text),
+        final_status=getattr(run, 'status', 'unknown'),
     )
 
     # 5. collect tool call payloads (if any) - return the actual calls made

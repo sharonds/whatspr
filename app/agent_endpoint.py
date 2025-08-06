@@ -7,6 +7,7 @@ managing conversation sessions, and dispatching tool calls with timeout protecti
 import asyncio
 import time
 import random
+import uuid
 from fastapi import APIRouter, Request
 from .agent_runtime import run_thread, ATOMIC_FUNCS
 from .prefilter import clean_message, twiml
@@ -144,16 +145,19 @@ async def run_thread_with_retry(
         except Exception as e:
             last_exception = e
             elapsed = time.time() - start_time
-            log.warning(
-                "ai_attempt_error",
-                attempt=attempt + 1,
-                error=str(e),
-                error_type=type(e).__name__,
-                elapsed_seconds=elapsed,
-                # Enhanced error details for OpenAI-specific issues
-                error_details=getattr(e, 'response', {}) if hasattr(e, 'response') else {},
-                openai_error_code=getattr(e, 'code', None) if hasattr(e, 'code') else None,
-            )
+            try:
+                log.warning(
+                    "ai_attempt_error",
+                    attempt=attempt + 1,
+                    error_message=str(e),
+                    error_type=type(e).__name__,
+                    elapsed_seconds=elapsed,
+                    # Enhanced error details for OpenAI-specific issues
+                    error_details=getattr(e, 'response', {}) if hasattr(e, 'response') else {},
+                    openai_error_code=getattr(e, 'code', None) if hasattr(e, 'code') else None,
+                )
+            except Exception as log_error:
+                print(f"AI attempt error logging failed: {log_error}, Original error: {e}")
 
         # Don't retry on the last attempt
         if attempt < max_retries:
@@ -172,23 +176,34 @@ async def run_thread_with_retry(
                 log.warning("insufficient_time_for_delay", remaining_time=remaining_time)
                 break
 
-    # All attempts failed - handle gracefully
+    # All attempts failed - handle gracefully with detailed timeout analysis
     elapsed = time.time() - start_time
 
     # Enhanced error logging with more details
     error_summary = str(last_exception) if last_exception else "Unknown error"
     error_type = type(last_exception).__name__ if last_exception else "Unknown"
 
+    # Timeout analysis for bottleneck identification
+    timeout_analysis = {
+        "total_timeout_ms": timeout_seconds * 1000,
+        "per_attempt_timeout_ms": (timeout_seconds / (max_retries + 1)) * 1000,
+        "actual_elapsed_ms": round(elapsed * 1000, 2),
+        "timeout_percentage": round((elapsed / timeout_seconds) * 100, 1),
+        "attempts_made": max_retries + 1,
+        "is_timeout_failure": isinstance(last_exception, asyncio.TimeoutError),
+        "bottleneck_likely": (
+            "openai_api" if isinstance(last_exception, asyncio.TimeoutError) else "other"
+        ),
+    }
+
     log.error(
-        "ai_all_attempts_failed",
+        "performance_ai_all_attempts_failed",
         attempts=max_retries + 1,
         elapsed_seconds=elapsed,
         final_error=error_summary,
         final_error_type=error_type,
         user_msg=user_msg[:100],
-        # Additional debugging info
-        timeout_seconds=timeout_seconds,
-        per_attempt_timeout=timeout_seconds / (max_retries + 1),
+        timeout_analysis=timeout_analysis,
     )
 
     # Create thread if needed but preserve existing thread_id on failure
@@ -269,21 +284,43 @@ async def agent_hook(request: Request):
     Returns:
         Response: TwiML response with agent's reply message.
     """
+    # Generate unique request ID for complete flow tracking
+    request_id = str(uuid.uuid4())[:8]
+    request_start_time = time.time()
+
     form = await request.form()
     phone = str(form.get("From", ""))
     body = str(form.get("Body", ""))
     clean = clean_message(body)
+
+    # Initial request logging with correlation ID
+    log.info(
+        "performance_request_start",
+        request_id=request_id,
+        phone_hash=phone[-4:] if phone else "unknown",
+        message_length=len(body) if body else 0,
+        clean_length=len(clean) if clean else 0,
+        message_preview=clean[:50] if clean else "none",
+    )
     if clean is None:
+        log.info(
+            "performance_request_rejected",
+            request_id=request_id,
+            reason="no_clean_text",
+            processing_time_ms=round((time.time() - request_start_time) * 1000, 2),
+        )
         return twiml("Please send text.")
 
     # Handle reset commands
     if clean.lower() in ["reset", "restart", "start over", "menu", "start"]:
+        reset_start = time.time()
         # Enhanced reset logging for MVP user tracking
         if USE_SESSION_MANAGER:
             existing_session = session_manager.get_session(phone)
             session_manager.remove_session(phone)
             log.info(
                 "session_reset_requested",
+                request_id=request_id,
                 phone_hash=phone[-4:] if phone else "none",
                 had_existing_session=existing_session is not None,
                 existing_thread_prefix=existing_session[:10] if existing_session else None,
@@ -295,19 +332,32 @@ async def agent_hook(request: Request):
             _sessions[phone] = None
             log.info(
                 "session_reset_requested_legacy",
+                request_id=request_id,
                 phone_hash=phone[-4:] if phone else "none",
                 had_existing_session=existing_thread is not None,
                 reset_command=clean.lower(),
             )
+
+        reset_time = time.time() - reset_start
+        log.info(
+            "performance_request_complete",
+            request_id=request_id,
+            type="reset_command",
+            processing_time_ms=round((time.time() - request_start_time) * 1000, 2),
+            reset_time_ms=round(reset_time * 1000, 2),
+        )
+
         return twiml(
             "👋 Hi! What kind of announcement?\n  Press 1 for Funding round\n  Press 2 for Product launch\n  Press 3 for Partnership / integration"
         )
 
     # Get thread_id (may be None for new sessions)
+    session_start = time.time()
     if USE_SESSION_MANAGER:
         thread_id = session_manager.get_session(phone)
         log.info(
             "thread_retrieved",
+            request_id=request_id,
             phone_hash=phone[-4:] if phone else "none",
             thread_id=thread_id[:10] if thread_id else None,
             source="session_manager",
@@ -316,10 +366,12 @@ async def agent_hook(request: Request):
         thread_id = _sessions.get(phone)
         log.info(
             "thread_retrieved",
+            request_id=request_id,
             phone_hash=phone[-4:] if phone else "none",
             thread_id=thread_id[:10] if thread_id else None,
             source="legacy_sessions",
         )
+    session_time = time.time() - session_start
 
     # Pre-process numeric menu selections
     original_clean = clean
@@ -338,12 +390,14 @@ async def agent_hook(request: Request):
 
         # Enhanced conversation flow logging for MVP user tracking
         conversation_context = {
+            "request_id": request_id,
             "phone_hash": phone[-4:] if phone else "none",
             "message_length": len(clean),
             "has_existing_session": thread_id is not None,
             "existing_thread_prefix": thread_id[:10] if thread_id else None,
             "is_menu_selection": clean.strip() in ["1", "1️⃣", "2", "2️⃣", "3", "3️⃣"],
             "message_preview": clean[:50] + "..." if len(clean) > 50 else clean,
+            "session_retrieval_ms": round(session_time * 1000, 2),
         }
 
         if USE_SESSION_MANAGER:
@@ -352,9 +406,12 @@ async def agent_hook(request: Request):
         log.info("conversation_message_received", **conversation_context)
 
         # Use retry-enabled AI processing with timeout protection
+        ai_processing_start = time.time()
         reply, thread_id, tool_calls = await run_thread_with_retry(thread_id, clean)
+        ai_processing_time = time.time() - ai_processing_start
 
         # Only update session if we have a valid thread_id
+        session_update_start = time.time()
         if thread_id and thread_id.strip():
             if USE_SESSION_MANAGER:
                 session_manager.set_session(phone, thread_id)
@@ -363,20 +420,27 @@ async def agent_hook(request: Request):
         else:
             log.error(
                 "invalid_thread_id_returned",
+                request_id=request_id,
                 thread_id=repr(thread_id),
                 phone_hash=phone[-4:] if phone else "none",
             )
+        session_update_time = time.time() - session_update_start
 
         processing_time = time.time() - request_start_time
 
-        # Enhanced response logging with conversation flow insights
+        # Enhanced response logging with conversation flow insights and performance metrics
         response_context = {
+            "request_id": request_id,
             "reply_length": len(reply),
             "tool_count": len(tool_calls),
-            "processing_time_seconds": round(processing_time, 3),
+            "total_processing_time_ms": round(processing_time * 1000, 2),
+            "ai_processing_time_ms": round(ai_processing_time * 1000, 2),
+            "session_update_time_ms": round(session_update_time * 1000, 2),
             "phone_hash": phone[-4:] if phone else "none",
             "thread_id_prefix": thread_id[:10] if thread_id else None,
             "reply_preview": reply[:100] + "..." if len(reply) > 100 else reply,
+            "timeout_threshold_ms": get_max_ai_processing_time() * 1000,
+            "timeout_hit": ai_processing_time >= get_max_ai_processing_time(),
         }
 
         if USE_SESSION_MANAGER:
@@ -392,7 +456,7 @@ async def agent_hook(request: Request):
             if atomic_tools_used:
                 response_context["pr_tools_used"] = atomic_tools_used
 
-        log.info("conversation_message_processed", **response_context)
+        log.info("performance_request_complete", **response_context)
 
         # Handle tool calls using dispatch table with enhanced logging
         for call in tool_calls:
@@ -406,6 +470,7 @@ async def agent_hook(request: Request):
                     # Enhanced tool execution logging for MVP press release flow tracking
                     log.info(
                         "tool_executed_success",
+                        request_id=request_id,
                         tool_name=tool_name,
                         phone_hash=phone[-4:] if phone else "none",
                         thread_id_prefix=thread_id[:10] if thread_id else None,
@@ -430,13 +495,16 @@ async def agent_hook(request: Request):
                         )
 
                 except Exception as tool_error:
-                    log.error(
-                        "tool_execution_failed",
-                        tool_name=tool_name,
-                        phone_hash=phone[-4:] if phone else "none",
-                        error=str(tool_error),
-                        error_type=type(tool_error).__name__,
-                    )
+                    try:
+                        log.error(
+                            "tool_execution_failed",
+                            tool_name=tool_name,
+                            phone_hash=phone[-4:] if phone else "none",
+                            error_message=str(tool_error),
+                            error_type=type(tool_error).__name__,
+                        )
+                    except Exception as log_err:
+                        print(f"Tool error logging failed: {log_err}, Tool error: {tool_error}")
             else:
                 log.warning(
                     "unknown_tool_called",
@@ -450,7 +518,7 @@ async def agent_hook(request: Request):
         try:
             log.error(
                 "conversation_processing_failed",
-                error=str(e),
+                error_message=str(e),
                 error_type=type(e).__name__,
                 message_preview=clean[:50] if clean else "none",
                 had_session=thread_id is not None,
@@ -580,6 +648,68 @@ async def sessions_details():
         "sessions": session_details[:20],  # Limit to 20 most recent for MVP
         "total_sessions_shown": min(len(session_details), 20),
         "timestamp": current_time,
+    }
+
+
+@router.get("/health/performance")
+async def performance_metrics():
+    """Performance monitoring endpoint for identifying bottlenecks.
+
+    Provides real-time performance insights for debugging timeout issues
+    and identifying optimization opportunities during MVP deployment.
+
+    Returns:
+        dict: Performance metrics and bottleneck analysis.
+    """
+    import os
+
+    # Get timeout configuration for analysis
+    timeout_config = {
+        "ai_processing_timeout_ms": get_max_ai_processing_time() * 1000,
+        "per_attempt_timeout_ms": (get_max_ai_processing_time() / (get_max_retries() + 1)) * 1000,
+        "max_retries": get_max_retries(),
+        "retry_base_delay_ms": get_retry_base_delay() * 1000,
+        "retry_max_delay_ms": get_retry_max_delay() * 1000,
+    }
+
+    # Session performance metrics
+    session_metrics = {}
+    if USE_SESSION_MANAGER:
+        session_metrics = {
+            "active_sessions": session_manager.get_session_count(),
+            "memory_usage_bytes": session_manager.estimate_memory_usage(),
+            "session_manager_enabled": True,
+        }
+    else:
+        session_metrics = {
+            "active_sessions": len([v for v in _sessions.values() if v is not None]),
+            "legacy_sessions": len(_sessions),
+            "session_manager_enabled": False,
+        }
+
+    # Environment performance factors
+    env_factors = {
+        "openai_api_key_configured": bool(os.environ.get("OPENAI_API_KEY")),
+        "twilio_auth_configured": bool(os.environ.get("TWILIO_AUTH_TOKEN")),
+        "model_type": "gpt-4o-mini",  # From agent_runtime.py
+        "file_search_enabled": True,  # Assistant uses File Search
+    }
+
+    return {
+        "performance_status": "monitoring_active",
+        "timeout_config": timeout_config,
+        "session_metrics": session_metrics,
+        "environment_factors": env_factors,
+        "bottleneck_analysis": {
+            "primary_bottleneck": "openai_assistant_processing",
+            "optimization_opportunities": [
+                "reduce_per_attempt_timeout",
+                "optimize_assistant_instructions",
+                "implement_response_streaming",
+            ],
+            "monitoring_focus": "ai_processing_time_ms > timeout_threshold_ms",
+        },
+        "timestamp": time.time(),
     }
 
 

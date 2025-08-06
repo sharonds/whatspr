@@ -18,11 +18,11 @@ class TimeoutConfig:
     def __init__(
         self,
         openai_request_timeout: float = 10.0,
-        ai_processing_timeout: float = 25.0,
+        ai_processing_timeout: float = 30.0,  # Task 2.1 optimization
         polling_max_attempts: int = 20,
-        polling_base_delay: float = 0.5,
-        polling_max_delay: float = 4.0,
-        retry_max_attempts: int = 2,
+        polling_base_delay: float = 0.2,  # Task 2.5 optimization
+        polling_max_delay: float = 2.0,  # Task 2.5 optimization
+        retry_max_attempts: int = 1,  # Task 2.1 optimization
         retry_base_delay: float = 0.5,
         retry_max_delay: float = 2.0,
         profile: Optional[str] = None,
@@ -102,11 +102,11 @@ class TimeoutConfig:
 
         return cls(
             openai_request_timeout=get_float('OPENAI_REQUEST_TIMEOUT', 10.0),
-            ai_processing_timeout=get_float('AI_PROCESSING_TIMEOUT', 25.0),
+            ai_processing_timeout=get_float('AI_PROCESSING_TIMEOUT', 30.0),  # Task 2.1 optimization
             polling_max_attempts=get_int('POLLING_MAX_ATTEMPTS', 20),
-            polling_base_delay=get_float('POLLING_BASE_DELAY', 0.5),
-            polling_max_delay=get_float('POLLING_MAX_DELAY', 4.0),
-            retry_max_attempts=get_int('RETRY_MAX_ATTEMPTS', 2),
+            polling_base_delay=get_float('POLLING_BASE_DELAY', 0.2),  # Task 2.5 optimization
+            polling_max_delay=get_float('POLLING_MAX_DELAY', 2.0),  # Task 2.5 optimization
+            retry_max_attempts=get_int('RETRY_MAX_ATTEMPTS', 1),  # Task 2.1 optimization
             retry_base_delay=get_float('RETRY_BASE_DELAY', 0.5),
             retry_max_delay=get_float('RETRY_MAX_DELAY', 2.0),
         )
