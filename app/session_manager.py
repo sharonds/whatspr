@@ -75,7 +75,9 @@ class SessionManager:
         entry = self._sessions.get(phone)
         if entry is None:
             try:
-                log.debug("session_not_found", phone_hash=phone[-4:] if phone else "unknown")
+                log.debug(
+                    "session_not_found", extra={"phone_hash": phone[-4:] if phone else "unknown"}
+                )
             except Exception:
                 pass
             return None
@@ -136,10 +138,12 @@ class SessionManager:
             try:
                 log.info(
                     "session_created",
-                    phone_hash=phone[-4:] if phone else "unknown",
-                    thread_id_prefix=thread_id[:10],
-                    total_sessions_created=self._total_sessions_created,
-                    current_active_sessions=len(self._sessions),
+                    extra={
+                        "phone_hash": phone[-4:] if phone else "unknown",
+                        "thread_id_prefix": thread_id[:10],
+                        "total_sessions_created": self._total_sessions_created,
+                        "current_active_sessions": len(self._sessions),
+                    },
                 )
             except Exception as log_error:
                 print(f"Session logging error: {log_error}")
@@ -147,9 +151,11 @@ class SessionManager:
             try:
                 log.info(
                     "session_updated",
-                    phone_hash=phone[-4:] if phone else "unknown",
-                    new_thread_id_prefix=thread_id[:10],
-                    current_active_sessions=len(self._sessions),
+                    extra={
+                        "phone_hash": phone[-4:] if phone else "unknown",
+                        "new_thread_id_prefix": thread_id[:10],
+                        "current_active_sessions": len(self._sessions),
+                    },
                 )
             except Exception as log_error:
                 print(f"Session update logging error: {log_error}")
@@ -329,7 +335,7 @@ class SessionManager:
         if phone in self._sessions:
             del self._sessions[phone]
             try:
-                log.debug("session_removed", phone_hash=phone[-4:])
+                log.debug("session_removed", extra={"phone_hash": phone[-4:]})
             except Exception:
                 pass
             return True

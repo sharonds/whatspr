@@ -200,11 +200,11 @@ def cancel_active_runs(thread_id: str) -> None:
             if run.status in {"in_progress", "requires_action", "queued"}:
                 try:
                     get_client().beta.threads.runs.cancel(thread_id=thread_id, run_id=run.id)
-                    log.info("cancelled_active_run", run_id=run.id, status=run.status)
+                    log.info("cancelled_active_run", extra={"run_id": run.id, "status": run.status})
                 except Exception as e:
-                    log.warning("failed_to_cancel_run", run_id=run.id, error=str(e))
+                    log.warning("failed_to_cancel_run", extra={"run_id": run.id, "error": str(e)})
     except Exception as e:
-        log.warning("failed_to_check_active_runs", error=str(e))
+        log.warning("failed_to_check_active_runs", extra={"error": str(e)})
 
 
 def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[Dict[str, Any]]]:
@@ -242,8 +242,10 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
         thread_creation_time = time.time() - thread_start
         log.info(
             "performance_thread_created",
-            thread_id_prefix=thread_id[:10],
-            creation_time_ms=round(thread_creation_time * 1000, 2),
+            extra={
+                "thread_id_prefix": thread_id[:10],
+                "creation_time_ms": round(thread_creation_time * 1000, 2),
+            },
         )
     else:
         # Cancel any active runs to prevent race conditions
@@ -252,8 +254,10 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
         cancel_runs_time = time.time() - cancel_start
         log.debug(
             "performance_cancel_runs",
-            thread_id_prefix=thread_id[:10],
-            cancel_time_ms=round(cancel_runs_time * 1000, 2),
+            extra={
+                "thread_id_prefix": thread_id[:10],
+                "cancel_time_ms": round(cancel_runs_time * 1000, 2),
+            },
         )
 
     # 1. append user message
@@ -266,9 +270,11 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     message_creation_time = time.time() - message_start
     log.debug(
         "performance_message_created",
-        thread_id_prefix=thread_id[:10],
-        message_length=len(user_msg),
-        creation_time_ms=round(message_creation_time * 1000, 2),
+        extra={
+            "thread_id_prefix": thread_id[:10],
+            "message_length": len(user_msg),
+            "creation_time_ms": round(message_creation_time * 1000, 2),
+        },
     )
 
     # 2. kick off a run
@@ -282,9 +288,11 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     run_creation_time = time.time() - run_start
     log.info(
         "performance_run_created",
-        thread_id_prefix=thread_id[:10],
-        run_id_prefix=run.id[:10],
-        creation_time_ms=round(run_creation_time * 1000, 2),
+        extra={
+            "thread_id_prefix": thread_id[:10],
+            "run_id_prefix": run.id[:10],
+            "creation_time_ms": round(run_creation_time * 1000, 2),
+        },
     )
 
     # 3. poll with exponential back-off and handle tool calls
@@ -305,11 +313,13 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
 
         log.debug(
             "performance_poll_attempt",
-            thread_id_prefix=thread_id[:10],
-            run_id_prefix=run.id[:10],
-            attempt=attempts,
-            status=run.status,
-            attempt_time_ms=round(poll_attempt_time * 1000, 2),
+            extra={
+                "thread_id_prefix": thread_id[:10],
+                "run_id_prefix": run.id[:10],
+                "attempt": attempts,
+                "status": run.status,
+                "attempt_time_ms": round(poll_attempt_time * 1000, 2),
+            },
         )
 
         if run.status == "completed":
@@ -382,9 +392,11 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
 
             log.debug(
                 "performance_polling_sleep",
-                thread_id_prefix=thread_id[:10],
-                sleep_time_ms=round(sleep_time * 1000, 2),
-                next_delay=delay,
+                extra={
+                    "thread_id_prefix": thread_id[:10],
+                    "sleep_time_ms": round(sleep_time * 1000, 2),
+                    "next_delay": delay,
+                },
             )
 
     if attempts >= max_attempts:
@@ -408,20 +420,22 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     # Log comprehensive performance summary
     log.info(
         "performance_run_thread_complete",
-        thread_id_prefix=thread_id[:10],
-        total_time_ms=round(total_time * 1000, 2),
-        thread_creation_ms=round(thread_creation_time * 1000, 2),
-        cancel_runs_ms=round(cancel_runs_time * 1000, 2),
-        message_creation_ms=round(message_creation_time * 1000, 2),
-        run_creation_ms=round(run_creation_time * 1000, 2),
-        polling_total_ms=round(polling_total_time * 1000, 2),
-        polling_api_calls_ms=round(total_poll_time * 1000, 2),
-        polling_sleep_ms=round(total_sleep_time * 1000, 2),
-        message_fetch_ms=round(message_fetch_time * 1000, 2),
-        polling_attempts=attempts,
-        tool_calls_count=len(tool_calls_made),
-        reply_length=len(reply_text),
-        final_status=getattr(run, 'status', 'unknown'),
+        extra={
+            "thread_id_prefix": thread_id[:10],
+            "total_time_ms": round(total_time * 1000, 2),
+            "thread_creation_ms": round(thread_creation_time * 1000, 2),
+            "cancel_runs_ms": round(cancel_runs_time * 1000, 2),
+            "message_creation_ms": round(message_creation_time * 1000, 2),
+            "run_creation_ms": round(run_creation_time * 1000, 2),
+            "polling_total_ms": round(polling_total_time * 1000, 2),
+            "polling_api_calls_ms": round(total_poll_time * 1000, 2),
+            "polling_sleep_ms": round(total_sleep_time * 1000, 2),
+            "message_fetch_ms": round(message_fetch_time * 1000, 2),
+            "polling_attempts": attempts,
+            "tool_calls_count": len(tool_calls_made),
+            "reply_length": len(reply_text),
+            "final_status": getattr(run, 'status', 'unknown'),
+        },
     )
 
     # 5. collect tool call payloads (if any) - return the actual calls made
