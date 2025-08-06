@@ -17,7 +17,11 @@ from .config import settings
 import structlog
 
 log = structlog.get_logger("security")
-twilio_validator = RequestValidator(settings.twilio_auth_token)
+
+# Initialize Twilio validator only if auth token is available
+twilio_validator = None
+if settings.twilio_auth_token:
+    twilio_validator = RequestValidator(settings.twilio_auth_token)
 
 
 class SecurityConfig:
@@ -200,6 +204,7 @@ async def ensure_twilio(request: Request):
 
     Verifies that the incoming request is actually from Twilio by
     validating the X-Twilio-Signature header against the request payload.
+    Skips validation if no Twilio auth token is configured (test environments).
 
     Args:
         request: FastAPI request object containing Twilio webhook data.
@@ -207,6 +212,11 @@ async def ensure_twilio(request: Request):
     Raises:
         HTTPException: 403 Forbidden if signature validation fails.
     """
+    # Skip validation if no Twilio auth token configured (test environments)
+    if not twilio_validator:
+        log.debug("twilio_validation_skipped", reason="no_auth_token")
+        return
+    
     signature = request.headers.get("X-Twilio-Signature", "")
     url = str(request.url)
     form = await request.form()

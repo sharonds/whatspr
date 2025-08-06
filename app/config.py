@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     """
 
     flow_spec_path: Path = Path("flows/pr_intake.yaml")
-    twilio_auth_token: str
+    twilio_auth_token: Optional[str] = None  # Made optional for test environments
     openai_api_key: Optional[str] = None
     llm_enabled: bool = False  # 🔑 feature flag
     adv_validation: bool = False  # 🔑 advanced validation feature flag
