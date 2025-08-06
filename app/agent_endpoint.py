@@ -348,7 +348,7 @@ async def agent_hook(request: Request):
         )
 
         return twiml(
-            "👋 Hi! What kind of announcement?\n  Press 1 for Funding round\n  Press 2 for Product launch\n  Press 3 for Partnership / integration"
+            "🚀 Welcome to WhatsPR! I'm your professional press release assistant.\n\nI'll help you create a compelling press release through a quick conversation. What would you like to announce?\n\n📊 Press 1: Funding round\n📦 Press 2: Product launch\n🤝 Press 3: Partnership"
         )
 
     # Get thread_id (may be None for new sessions)
