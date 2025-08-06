@@ -23,6 +23,11 @@ class Settings(BaseSettings):
         llm_enabled: Feature flag for LLM-powered question rephrasing.
         adv_validation: Feature flag for advanced input validation.
         required_fields: Legacy field list for backward compatibility.
+        environment: Environment profile (development, staging, production).
+        openai_request_timeout: Timeout for OpenAI API requests.
+        ai_processing_timeout: Total timeout for AI processing.
+        retry_max_attempts: Maximum retry attempts.
+        polling_max_attempts: Maximum polling attempts.
     """
 
     flow_spec_path: Path = Path("flows/pr_intake.yaml")
@@ -30,6 +35,13 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = None
     llm_enabled: bool = False  # 🔑 feature flag
     adv_validation: bool = False  # 🔑 advanced validation feature flag
+
+    # Environment configuration
+    environment: Optional[str] = None
+    openai_request_timeout: Optional[float] = None
+    ai_processing_timeout: Optional[float] = None
+    retry_max_attempts: Optional[int] = None
+    polling_max_attempts: Optional[int] = None
 
     # Legacy field list for backward compatibility
     required_fields: List[str] = [

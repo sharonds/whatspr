@@ -182,7 +182,13 @@ class TimeoutManager:
         """Initialize timeout configuration."""
         if not self._initialized:
             try:
-                self.config = TimeoutConfig.from_env()
+                # Check if we have an environment profile setting
+                import os
+                profile = os.environ.get("ENVIRONMENT")
+                if profile and profile in ['development', 'staging', 'production']:
+                    self.config = TimeoutConfig.for_profile(profile)
+                else:
+                    self.config = TimeoutConfig.from_env()
             except Exception as e:
                 log.warning(f"Failed to initialize TimeoutConfig: {e}, using defaults")
                 self.config = TimeoutConfig()
