@@ -1,25 +1,35 @@
 # /create-pr
 
-**FEATURE CONTEXT:** [Use /context-sync first if context unclear]
+**FEATURE CONTEXT:** [SPECIFY_FEATURE_NAME]
+**IMPLEMENTATION:** [BRIEF_CHANGES_SUMMARY]
 
-Feature Name: [SPECIFY_FEATURE_NAME]
-Implementation: [BRIEF_SUMMARY_OF_CHANGES]
+@pr-specialist Create streamlined PR description for MVP feature: **[FEATURE_NAME]**
 
-@pr-specialist Please create professional PR description for feature: **[FEATURE_NAME]**
+**MVP PR Requirements:**
+1. **Core functionality** - What this feature does (1-2 sentences)
+2. **Production impact** - What changes for users
+3. **Testing verification** - How to confirm it works
+4. **Deployment readiness** - Production deployment notes
+5. **Rollback plan** - How to revert if needed
 
-**PR Documentation Requirements:**
-1. **Summary** - What this feature does and why (2-3 sentences)
-2. **Key Changes** - Most important files and modifications
-3. **Testing** - How to verify locally and in staging
-4. **Deployment** - Feature flags, environment variables, monitoring
-5. **Review Guidance** - What reviewers should focus on
+**MVP PR Format:**
+```markdown
+## MVP Feature: [Name]
+[Brief core functionality description]
 
-**Format Requirements:**
-- Under 200 words total
-- Focus on reviewer needs
-- Include deployment checklist
-- Clear testing instructions
+## Production Changes
+- **User impact:** [What users experience]
+- **Technical changes:** [Key implementation notes]
 
-**Fallback:** If @pr-specialist unavailable, create professional PR description covering summary, changes, testing, deployment, and review guidance.
+## Verification
+- [ ] Core functionality tested
+- [ ] No breaking changes
+- [ ] Production ready
 
-Keep focused on what reviewers need to know to approve safely.
+## Rollback
+[Quick revert procedure]
+```
+
+**Length:** Max 150 words - focused on production deployment decisions.
+
+**Fallback:** If @pr-specialist unavailable, create concise PR focusing on production readiness and rollback procedures.

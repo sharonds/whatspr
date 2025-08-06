@@ -4,7 +4,31 @@
 
 What feature do you want to build?
 
-@blueprint-specialist Please create a comprehensive TDD plan for this feature request.
+# /blueprint
+
+**CONTEXT INITIALIZATION:** This command starts a new MVP feature workflow session.
+
+What feature do you want to build?
+
+**Step 1: Load Project Context**
+@blueprint-specialist Read `CLAUDE.md` for project context, then create an MVP-focused TDD plan for this feature: [USER_INPUT]
+
+**MVP Planning Focus:**
+- Essential functionality only (defer nice-to-haves)
+- Core test scenarios (avoid edge case over-testing)
+- Direct production deployment (no staging complexity)
+- Minimal viable implementation
+
+**Required Output:**
+1. Git branch name (feat/xxx format)
+2. Essential failing test suite (core scenarios only)
+3. Minimal file structure recommendations
+4. Direct production deployment notes
+5. MVP success criteria
+
+**Fallback:** If @blueprint-specialist unavailable, provide MVP TDD planning focusing on essential functionality and core tests only.
+
+Don't write implementation code - only essential tests and lean MVP plan.
 
 **Required Output:**
 1. Git branch name (feat/xxx format)

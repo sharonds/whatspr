@@ -1,25 +1,29 @@
 # /qa-review
 
-**FEATURE CONTEXT:** [Use /context-sync first if context unclear]
+**FEATURE CONTEXT:** [SPECIFY_FEATURE_NAME]
+**CHANGED FILES:** [OUTPUT OF: git diff --staged --name-only]
 
-Feature Name: [SPECIFY_FEATURE_NAME]
-Key Implementation: [BRIEF_DESCRIPTION_OF_WHAT_WAS_BUILT]
+@qa-specialist Please review ONLY these specific files for MVP feature: **[FEATURE_NAME]**
 
-@qa-specialist Please conduct comprehensive review of staged changes for this feature: **[FEATURE_NAME]**
+**Context Loading:**
+1. Read `CLAUDE.md` sections: Security Considerations, Known Issues (ONLY)
+2. Focus on changed files listed above (no broad scanning)
+3. MVP production readiness assessment
 
-**Review Scope:**
-- Security vulnerabilities and input validation
-- Test coverage and missing edge cases
-- Staging environment readiness
-- Performance and deployment impact
-- Code quality and error handling
+**Changed Files to Review:**
+```bash
+# Provide exact file list
+[FILE_1] - [Purpose]
+[FILE_2] - [Purpose]
+[FILE_3] - [Purpose]
+```
 
-**Required Assessment:**
-- 🚨 Critical issues (must fix before staging)
-- ⚠️ Recommendations (should fix for quality)
-- ✅ Staging deployment readiness
-- 🔧 Specific test commands to run
+**MVP Review Scope:**
+- 🚨 **Critical Issues** - Security vulnerabilities, breaking changes
+- ⚠️ **Production Safety** - Won't break existing functionality
+- ✅ **Core Functionality** - Feature works as intended
+- 🔧 **Essential Tests** - Core scenarios covered
 
-**Fallback:** If @qa-specialist unavailable, perform expert QA review covering security, testing, staging readiness, and performance considerations.
+**MVP Focus:** Ship-blocking issues only. Defer perfection to post-MVP iterations.
 
-Focus on issues that could break staging or production.
+**Fallback:** If @qa-specialist unavailable, review for critical security issues and production safety only.
