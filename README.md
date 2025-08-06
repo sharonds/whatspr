@@ -20,11 +20,15 @@ FastAPI chatbot for WhatsApp using Twilio that creates press releases through co
 * **Privacy Protection**: Hashed phone numbers in logs
 
 ### Infrastructure
+* **Session Management**: TTL-based conversation state with automatic cleanup (MVP: <20 users)
+* **Health Monitoring**: Real-time session metrics via `/health/sessions` endpoints
+* **API Failure Recovery**: Sessions preserved during OpenAI/Twilio timeouts
+* **Emergency Rollback**: Production-safe fallback via `scripts/rollback_session_manager.py`
 * **Twilio Integration**: HMAC signature verification for webhook security
 * **SQLite Persistence**: Database storage with atomic operations
 * **Structured Logging**: JSON logging with `structlog` for monitoring
 * **Request Middleware**: Latency tracking and error handling
-* **Comprehensive Testing**: Unit tests, E2E tests, and security validation
+* **Comprehensive Testing**: Unit tests, E2E tests, session lifecycle, and security validation
 
 ### Code Quality Enforcement
 * **Automated Documentation**: Complete Google-style docstring coverage (0 pydocstyle errors)
@@ -110,6 +114,8 @@ pytest tests/test_tools_atomic.py -v      # Atomic tools functionality
 pytest tests/test_safety.py -v            # Security validations
 pytest tests/e2e/ -v                      # End-to-end conversation flows
 pytest tests/test_reliability.py -v       # OpenAI API reliability testing
+pytest tests/test_session_cleanup.py -v   # Session management and cleanup
+pytest tests/test_mvp_session_lifecycle.py -v  # MVP-scale concurrent user testing
 ```
 
 ### 🔧 Diagnostic Tools
@@ -125,6 +131,11 @@ pytest tests/test_reliability.py -v --tb=short
 
 # Check OpenAI API connection
 python -c "from app.agent_runtime import get_client; print('✅ API connection OK' if get_client().models.list() else '❌ Connection failed')"
+
+# Session system health monitoring
+curl -s http://localhost:8000/health/sessions | jq        # Session system status
+curl -s http://localhost:8000/health/sessions/details | jq  # Active sessions, memory usage
+curl -X POST http://localhost:8000/health/sessions/cleanup  # Force cleanup if needed
 ```
 
 ### E2E Testing
