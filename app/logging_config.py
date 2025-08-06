@@ -20,7 +20,7 @@ def scrub_pii(logger, _, event):
     Returns:
         dict: Event dictionary with PII fields masked.
     """
-    for k in ("phone", "email"):
+    for k in ("phone", "email", "phone_hash"):
         if k in event:
             event[k] = "***"
     return event
