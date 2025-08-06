@@ -216,7 +216,7 @@ async def ensure_twilio(request: Request):
     if not twilio_validator:
         log.debug("twilio_validation_skipped", reason="no_auth_token")
         return
-    
+
     signature = request.headers.get("X-Twilio-Signature", "")
     url = str(request.url)
     form = await request.form()
