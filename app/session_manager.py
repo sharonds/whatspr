@@ -74,7 +74,10 @@ class SessionManager:
 
         entry = self._sessions.get(phone)
         if entry is None:
-            log.debug("session_not_found", phone_hash=phone[-4:] if phone else "unknown")
+            try:
+                log.debug("session_not_found", phone_hash=phone[-4:] if phone else "unknown")
+            except Exception:
+                pass
             return None
 
         # Check if session has expired
@@ -130,20 +133,26 @@ class SessionManager:
 
         # Enhanced logging for MVP user tracking
         if is_new_session:
-            log.info(
-                "session_created",
-                phone_hash=phone[-4:] if phone else "unknown",
-                thread_id_prefix=thread_id[:10],
-                total_sessions_created=self._total_sessions_created,
-                current_active_sessions=len(self._sessions),
-            )
+            try:
+                log.info(
+                    "session_created",
+                    phone_hash=phone[-4:] if phone else "unknown",
+                    thread_id_prefix=thread_id[:10],
+                    total_sessions_created=self._total_sessions_created,
+                    current_active_sessions=len(self._sessions),
+                )
+            except Exception as log_error:
+                print(f"Session logging error: {log_error}")
         else:
-            log.info(
-                "session_updated",
-                phone_hash=phone[-4:] if phone else "unknown",
-                new_thread_id_prefix=thread_id[:10],
-                current_active_sessions=len(self._sessions),
-            )
+            try:
+                log.info(
+                    "session_updated",
+                    phone_hash=phone[-4:] if phone else "unknown",
+                    new_thread_id_prefix=thread_id[:10],
+                    current_active_sessions=len(self._sessions),
+                )
+            except Exception as log_error:
+                print(f"Session update logging error: {log_error}")
 
     def remove_session(self, phone: str) -> bool:
         """Remove session for phone number.
@@ -319,7 +328,10 @@ class SessionManager:
         """
         if phone in self._sessions:
             del self._sessions[phone]
-            log.debug("session_removed", phone_hash=phone[-4:])
+            try:
+                log.debug("session_removed", phone_hash=phone[-4:])
+            except Exception:
+                pass
             return True
         return False
 

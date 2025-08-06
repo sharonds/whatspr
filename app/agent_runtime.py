@@ -185,6 +185,28 @@ def create_thread() -> str:
     return thread.id
 
 
+def cancel_active_runs(thread_id: str) -> None:
+    """Cancel any active runs on a thread to prevent race conditions.
+
+    Args:
+        thread_id: Thread ID to check for active runs.
+    """
+    try:
+        # Get list of runs for this thread
+        runs = get_client().beta.threads.runs.list(thread_id=thread_id, limit=5)
+
+        # Cancel any in-progress runs
+        for run in runs.data:
+            if run.status in {"in_progress", "requires_action", "queued"}:
+                try:
+                    get_client().beta.threads.runs.cancel(thread_id=thread_id, run_id=run.id)
+                    log.info("cancelled_active_run", run_id=run.id, status=run.status)
+                except Exception as e:
+                    log.warning("failed_to_cancel_run", run_id=run.id, error=str(e))
+    except Exception as e:
+        log.warning("failed_to_check_active_runs", error=str(e))
+
+
 def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[Dict[str, Any]]]:
     """Execute conversation turn with OpenAI Assistant.
 
@@ -211,6 +233,9 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     # Lazy thread creation - only create when actually needed
     if thread_id is None:
         thread_id = create_thread()
+    else:
+        # Cancel any active runs to prevent race conditions
+        cancel_active_runs(thread_id)
 
     # 1. append user message
     get_client().beta.threads.messages.create(

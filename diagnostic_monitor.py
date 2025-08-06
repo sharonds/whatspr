@@ -8,6 +8,10 @@ import requests
 import time
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class WhatsAppDiagnostics:
@@ -226,15 +230,19 @@ class WhatsAppDiagnostics:
         )
         self.results.append(complex_result)
 
-        # Test 6: Multiple rapid tests to reproduce 50% failure rate
-        print("\n6️⃣ Testing Rapid Fire (10 messages to reproduce 50% failure):")
+        # Test 6: Twilio Sandbox rate testing (respects 3s limit for sandbox)
+        print(
+            "\n6️⃣ Testing Twilio Sandbox Rate-Compliant Messaging (5 messages respecting 3s limit):"
+        )
         rapid_results = []
-        for i in range(10):
-            print(f"   Test {i+1}/10:")
+        for i in range(5):  # Reduced from 10 to respect rate limits
+            print(f"   Test {i+1}/5:")
             result = self.test_whatsapp_endpoint(f"Test message {i+1}: We raised funding")
             rapid_results.append(result)
             self.results.append(result)
-            time.sleep(0.5)  # Brief pause to avoid overwhelming
+            if i < 4:  # Don't sleep after the last message
+                print("   ⏱️  Waiting 3.5s (Twilio Sandbox rate limit compliance)...")
+                time.sleep(3.5)  # 3.5s for Twilio Sandbox rate limit
 
         # Analyze results
         self.analyze_results(openai_success, openai_time)
@@ -310,6 +318,10 @@ class WhatsAppDiagnostics:
 
         # Specific recommendations
         print("\n💡 RECOMMENDED NEXT STEPS:")
+
+        print(
+            "   📋 NOTE: This test respects Twilio Sandbox rate limits (1 msg per 3s) for accurate results"
+        )
 
         if not openai_success:
             print("   1. 🚨 URGENT: Check OpenAI API key and account status")

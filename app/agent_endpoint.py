@@ -306,16 +306,32 @@ async def agent_hook(request: Request):
     # Get thread_id (may be None for new sessions)
     if USE_SESSION_MANAGER:
         thread_id = session_manager.get_session(phone)
+        log.info(
+            "thread_retrieved",
+            phone_hash=phone[-4:] if phone else "none",
+            thread_id=thread_id[:10] if thread_id else None,
+            source="session_manager",
+        )
     else:
         thread_id = _sessions.get(phone)
+        log.info(
+            "thread_retrieved",
+            phone_hash=phone[-4:] if phone else "none",
+            thread_id=thread_id[:10] if thread_id else None,
+            source="legacy_sessions",
+        )
 
     # Pre-process numeric menu selections
+    original_clean = clean
     if clean.strip() in ["1", "1️⃣"]:
         clean = "I want to announce a funding round"
+        log.info("menu_selection_processed", original=original_clean, converted=clean)
     elif clean.strip() in ["2", "2️⃣"]:
         clean = "I want to announce a product launch"
+        log.info("menu_selection_processed", original=original_clean, converted=clean)
     elif clean.strip() in ["3", "3️⃣"]:
         clean = "I want to announce a partnership or integration"
+        log.info("menu_selection_processed", original=original_clean, converted=clean)
 
     try:
         request_start_time = time.time()
@@ -431,20 +447,22 @@ async def agent_hook(request: Request):
 
     except Exception as e:
         # Enhanced error logging for MVP debugging
-        log.error(
-            "conversation_processing_failed",
-            error=str(e),
-            error_type=type(e).__name__,
-            phone_hash=phone[-4:] if phone else "none",
-            message_preview=clean[:50] if clean else "none",
-            had_session=thread_id is not None,
-            processing_time=(
-                round(time.time() - request_start_time, 3)
-                if 'request_start_time' in locals()
-                else None
-            ),
-            exc_info=True,
-        )
+        try:
+            log.error(
+                "conversation_processing_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+                message_preview=clean[:50] if clean else "none",
+                had_session=thread_id is not None,
+                processing_time=(
+                    round(time.time() - request_start_time, 3)
+                    if 'request_start_time' in locals()
+                    else None
+                ),
+            )
+        except Exception as log_error:
+            # Fallback if logging fails
+            print(f"Logging error: {log_error}, Original error: {e}")
         return twiml("Oops, temporary error. Try again.")
     return twiml(reply)
 

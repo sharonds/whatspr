@@ -10,14 +10,19 @@ import time
 from pathlib import Path
 from datetime import datetime
 
-# Setup environment
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# Load environment variables from .env file FIRST
+load_dotenv()
+
+# Setup environment (only set if not already set)
 os.environ.setdefault('TWILIO_AUTH_TOKEN', 'test-token')
 
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.agent_runtime import create_thread, run_thread, get_assistant_id
-from openai import OpenAI
 from tests.utils.sim_client import WhatsSim
 
 
