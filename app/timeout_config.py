@@ -116,9 +116,11 @@ class TimeoutConfig:
         """Create configuration for specific environment profile."""
         if profile == 'development':
             return cls(
-                openai_request_timeout=5.0,
-                ai_processing_timeout=15.0,
-                retry_max_attempts=1,
+                openai_request_timeout=10.0,  # Task 2.1 optimization
+                ai_processing_timeout=30.0,  # Task 2.1 optimization: 15s -> 30s
+                retry_max_attempts=1,  # Task 2.1 optimization
+                polling_base_delay=0.2,  # Task 2.5 optimization
+                polling_max_delay=2.0,  # Task 2.5 optimization
             )
         elif profile == 'staging':
             return cls(
