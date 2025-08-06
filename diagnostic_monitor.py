@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""
-WhatsApp Failure Diagnostic Monitor
-Real-time analysis to identify the 50% failure bottleneck
+"""WhatsApp Failure Diagnostic Monitor.
+
+Real-time analysis to identify the 50% failure bottleneck.
 """
 
 import requests
@@ -15,12 +15,15 @@ load_dotenv()
 
 
 class WhatsAppDiagnostics:
+    """WhatsApp diagnostic testing and analysis."""
+
     def __init__(self):
-        self.base_url = "http://localhost:8004"
+        """Initialize diagnostic test runner."""
+        self.base_url = "http://localhost:8000"
         self.results = []
 
     def test_openai_api_health(self):
-        """Test OpenAI API directly to isolate API issues"""
+        """Test OpenAI API directly to isolate API issues."""
         print("🧪 Testing OpenAI API health...")
 
         try:
@@ -50,8 +53,7 @@ class WhatsAppDiagnostics:
             return False, elapsed
 
     def test_whatsapp_endpoint(self, message_body="We raised 250K from Elon Musk"):
-        """Test the exact WhatsApp endpoint that's failing"""
-
+        """Test the exact WhatsApp endpoint that's failing."""
         test_data = {
             "From": "whatsapp:+31621366440",
             "Body": message_body,
@@ -133,7 +135,7 @@ class WhatsAppDiagnostics:
             }
 
     def test_server_health(self):
-        """Test basic server connectivity"""
+        """Test basic server connectivity."""
         print("🏥 Testing server health endpoints...")
 
         # Test root endpoint
@@ -153,7 +155,7 @@ class WhatsAppDiagnostics:
             print(f"❌ Agent endpoint failed: {e}")
 
     def check_system_resources(self):
-        """Check if system resources could be the bottleneck"""
+        """Check if system resources could be the bottleneck."""
         print("💻 Checking system resources...")
 
         try:
@@ -195,7 +197,7 @@ class WhatsAppDiagnostics:
                 print(f"📊 Could not get system stats: {e}")
 
     def run_comprehensive_test(self):
-        """Run comprehensive failure analysis"""
+        """Run comprehensive failure analysis."""
         print("🔍 Starting Comprehensive WhatsApp Failure Analysis...")
         print("=" * 70)
         print(f"🕐 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -248,7 +250,7 @@ class WhatsAppDiagnostics:
         self.analyze_results(openai_success, openai_time)
 
     def analyze_results(self, openai_success, openai_time):
-        """Analyze test results to identify bottlenecks"""
+        """Analyze test results to identify bottlenecks."""
         print("\n" + "=" * 70)
         print("📊 DIAGNOSTIC ANALYSIS RESULTS")
         print("=" * 70)

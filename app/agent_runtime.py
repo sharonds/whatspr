@@ -259,8 +259,9 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
                 "cancel_time_ms": round(cancel_runs_time * 1000, 2),
             },
         )
-        # Small delay to ensure cancellation takes effect before adding new messages
-        time.sleep(0.1)
+        # Increased delay to ensure cancellation takes effect before adding new messages
+        # Previous 100ms was insufficient - increased to 500ms for reliability
+        time.sleep(0.5)
 
     # 1. append user message
     message_start = time.time()
