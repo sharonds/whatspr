@@ -157,7 +157,17 @@ def _get_or_create_assistant() -> str:
     return assistant.id
 
 
-ASSISTANT_ID = _get_or_create_assistant()
+# Lazy initialization to prevent API calls during module import
+_assistant_id = None
+
+
+def get_assistant_id() -> str:
+    """Get or create the assistant ID lazily."""
+    global _assistant_id
+    if _assistant_id is None:
+        _assistant_id = _get_or_create_assistant()
+    return _assistant_id
+
 
 # ---------- helper API ----------
 
@@ -212,7 +222,7 @@ def run_thread(thread_id: Optional[str], user_msg: str) -> Tuple[str, str, List[
     # 2. kick off a run
     run = get_client().beta.threads.runs.create(
         thread_id=thread_id,
-        assistant_id=ASSISTANT_ID,
+        assistant_id=get_assistant_id(),
         # No instructions override: already baked into the assistant.
         timeout=timeout_manager.config.openai_request_timeout,  # server-side request timeout
     )

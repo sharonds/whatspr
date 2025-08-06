@@ -16,7 +16,7 @@ os.environ.setdefault('TWILIO_AUTH_TOKEN', 'test-token')
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.agent_runtime import create_thread, run_thread, ASSISTANT_ID
+from app.agent_runtime import create_thread, run_thread, get_assistant_id
 from openai import OpenAI
 from tests.utils.sim_client import WhatsSim
 
@@ -45,7 +45,7 @@ def test_openai_connection():
         colored_print("  ✅ API Key is valid", "green")
 
         # Test assistant access
-        assistant = client.beta.assistants.retrieve(ASSISTANT_ID)
+        assistant = client.beta.assistants.retrieve(get_assistant_id())
         colored_print(f"  ✅ Assistant accessible: {assistant.id}", "green")
         colored_print(f"     Model: {assistant.model}", "green")
         colored_print(f"     Tools: {len(assistant.tools) if assistant.tools else 0}", "green")
@@ -212,7 +212,7 @@ def main():
         f"  API Key: {'✅ Present' if api_key else '❌ Missing'}", "green" if api_key else "red"
     )
     colored_print(f"  Key length: {len(api_key)} chars", "yellow")
-    colored_print(f"  Assistant ID: {ASSISTANT_ID}", "yellow")
+    colored_print(f"  Assistant ID: {get_assistant_id()}", "yellow")
 
     # Run tests
     tests = [

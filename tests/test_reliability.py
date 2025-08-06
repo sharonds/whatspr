@@ -14,7 +14,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict
 from tests.utils.sim_client import WhatsSim
-from app.agent_runtime import create_thread, ASSISTANT_ID
+from app.agent_runtime import create_thread, get_assistant_id
 from openai import OpenAI
 import structlog
 
@@ -34,8 +34,8 @@ class TestOpenAIReliability:
     def test_assistant_exists_and_accessible(self):
         """Verify the assistant is properly configured and accessible."""
         try:
-            assistant = self.client.beta.assistants.retrieve(ASSISTANT_ID)
-            assert assistant.id == ASSISTANT_ID
+            assistant = self.client.beta.assistants.retrieve(get_assistant_id())
+            assert assistant.id == get_assistant_id()
             log.info(
                 "assistant_verified",
                 assistant_id=assistant.id,
@@ -266,7 +266,7 @@ class TestTimeoutAndRecovery:
         for i in range(5):
             start = time.time()
             try:
-                response = bot.send(f"Test message {i}")
+                bot.send(f"Test message {i}")
                 elapsed = time.time() - start
                 response_times.append(elapsed)
                 log.info(f"response_time_{i}", seconds=elapsed, success=True, mocked=True)
@@ -341,7 +341,7 @@ class TestDiagnosticSummary:
 
         # Test 1: Basic connectivity
         try:
-            response = bot.send("test")
+            bot.send("test")
             print("✅ Basic connectivity: SUCCESS")
         except Exception as e:
             print(f"❌ Basic connectivity: FAILED - {e}")
@@ -349,8 +349,8 @@ class TestDiagnosticSummary:
         # Test 2: OpenAI API
         try:
             client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
-            assistant = client.beta.assistants.retrieve(ASSISTANT_ID)
-            print(f"✅ OpenAI API access: SUCCESS (Assistant: {ASSISTANT_ID})")
+            client.beta.assistants.retrieve(get_assistant_id())
+            print(f"✅ OpenAI API access: SUCCESS (Assistant: {get_assistant_id()})")
         except Exception as e:
             print(f"❌ OpenAI API access: FAILED - {e}")
 
