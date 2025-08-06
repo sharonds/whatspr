@@ -22,3 +22,5 @@ test-action*.md
 *.pem
 secrets.json
 config.json
+# Claude workflow backups
+.claude.backup.*/
