@@ -191,7 +191,7 @@ class TestSessionIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_session_access_thread_safety(self):
         """Test concurrent access to sessions is thread-safe."""
-        manager = SessionManager(SessionConfig(ttl_seconds=300))
+        manager = SessionManager(SessionConfig(ttl_seconds=300, cleanup_interval=60))
 
         async def concurrent_session_access(phone_suffix):
             phone = f"+123456789{phone_suffix}"
@@ -217,7 +217,9 @@ class TestMemoryLeakPrevention:
 
     def test_large_session_volume_cleanup(self):
         """Test system handles large volume of sessions with proper cleanup."""
-        manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True))
+        manager = SessionManager(
+            SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True)
+        )
 
         # Create large number of sessions
         initial_session_count = 1000
@@ -237,7 +239,9 @@ class TestMemoryLeakPrevention:
 
     def test_memory_growth_bounds(self):
         """Test memory usage stays within reasonable bounds."""
-        manager = SessionManager(SessionConfig(ttl_seconds=1, cleanup_interval=0.5, allow_test_values=True))
+        manager = SessionManager(
+            SessionConfig(ttl_seconds=1, cleanup_interval=0.5, allow_test_values=True)
+        )
 
         # Add sessions and measure memory growth
         initial_memory = manager.estimate_memory_usage()
@@ -263,7 +267,9 @@ class TestMemoryLeakPrevention:
 
     def test_cleanup_performance_under_load(self):
         """Test cleanup performance doesn't degrade significantly under load."""
-        manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True))
+        manager = SessionManager(
+            SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True)
+        )
 
         # Add many sessions
         session_count = 5000
@@ -340,7 +346,7 @@ class TestBackwardCompatibility:
         }
 
         # Create manager and migrate
-        manager = SessionManager(SessionConfig(ttl_seconds=300))
+        manager = SessionManager(SessionConfig(ttl_seconds=300, cleanup_interval=60))
         migrated_count = manager.migrate_from_dict(existing_sessions)
 
         assert migrated_count == 2  # Only sessions with thread_ids
@@ -349,8 +355,13 @@ class TestBackwardCompatibility:
         assert manager.get_session("+5555555555") is None
 
     @pytest.mark.asyncio
-    async def test_gradual_rollout_compatibility(self, mock_request):
+    async def test_gradual_rollout_compatibility(self):
         """Test gradual rollout can fall back to old behavior."""
+        # Create mock request
+        mock_request = MagicMock()
+        form_data = {"From": "+1234567890", "Body": "test message"}
+        mock_request.form.return_value = asyncio.coroutine(lambda: form_data)()
+
         with patch('app.agent_endpoint.USE_SESSION_MANAGER', False):
             # Should use old _sessions dict behavior
             with patch('app.agent_endpoint._sessions', {}) as mock_sessions:
@@ -369,7 +380,7 @@ class TestMonitoringAndObservability:
 
     def test_session_metrics_collection(self):
         """Test collection of session-related metrics."""
-        manager = SessionManager(SessionConfig(ttl_seconds=300))
+        manager = SessionManager(SessionConfig(ttl_seconds=300, cleanup_interval=60))
 
         # Initial metrics
         metrics = manager.get_metrics()
@@ -386,7 +397,9 @@ class TestMonitoringAndObservability:
         assert metrics['total_sessions_created'] == 5
 
         # Expire sessions
-        manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True))
+        manager = SessionManager(
+            SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True)
+        )
         for i in range(3):
             manager.set_session(f"+{i:010d}", f"thread_{i}")
 
@@ -399,7 +412,9 @@ class TestMonitoringAndObservability:
     def test_cleanup_logging_and_alerts(self):
         """Test proper logging during cleanup operations."""
         with patch('app.session_manager.log') as mock_log:
-            manager = SessionManager(SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True))
+            manager = SessionManager(
+                SessionConfig(ttl_seconds=0.1, cleanup_interval=0.05, allow_test_values=True)
+            )
 
             # Create and expire sessions
             for i in range(10):

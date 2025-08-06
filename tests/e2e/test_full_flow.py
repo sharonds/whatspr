@@ -10,6 +10,7 @@ tests will be skipped with appropriate markers.
 import pytest
 import os
 from tests.utils.sim_client import WhatsSim
+from tests.utils.rate_limiter import RateLimitedTestCase, rate_limit_test
 
 
 def has_valid_api_key():
@@ -20,9 +21,14 @@ def has_valid_api_key():
 
 
 @pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")
-class TestDifficultInputHandling:
+class TestDifficultInputHandling(RateLimitedTestCase):
     """Test suite for challenging user input scenarios."""
 
+    # Configure rate limiting for API calls
+    CALLS_PER_SECOND = 0.3  # 1 call every 3-4 seconds
+    BURST_SIZE = 2
+
+    @rate_limit_test(calls_per_second=0.3, burst_size=2)
     def test_conversation_with_emoji(self):
         """Test that agent can handle emojis in user input without crashing.
 

@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
+from tests.utils.rate_limiter import RateLimitedTestCase
 
 
 def has_valid_api_key():
@@ -27,18 +28,20 @@ def has_valid_api_key():
 
 
 @pytest.mark.skipif(not has_valid_api_key(), reason="Requires valid OpenAI API key")
-class TestWhatsAppReliability:
+class TestWhatsAppReliability(RateLimitedTestCase):
     """Test WhatsApp webhook reliability and production scenarios."""
 
-    def setup_method(self):
-        """Set up test environment."""
-        self.client = TestClient(app)
-        self.test_phone = "+15551234567"
+    # Configure rate limiting for API calls
+    CALLS_PER_SECOND = 0.25  # 1 call every 4 seconds for reliability tests
+    BURST_SIZE = 2
 
-    def _send_whatsapp_message(self, body, phone=None, extra_params=None):
+    def setup_method(self, method):
+        """Set up test environment and rate limiting."""
+        super().setup_method(method)
+        self.client = TestClient(app)
+
+    def _send_whatsapp_message(self, body, phone="+15551234567", extra_params=None):
         """Send a WhatsApp message via Twilio webhook format."""
-        if phone is None:
-            phone = self.test_phone
 
         data = {
             "From": phone,
@@ -51,26 +54,31 @@ class TestWhatsAppReliability:
             data.update(extra_params)
 
         start_time = time.time()
-        response = self.client.post(
-            "/agent",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data=data,
+        # Apply rate limiting to API calls
+        response = self.make_api_call(
+            lambda: self.client.post(
+                "/agent",
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                data=data,
+            )
         )
         duration = time.time() - start_time
 
         return response, duration
 
-    def test_production_failure_scenario(self):
+    def test_production_failure_scenario(self, unique_phone):
         """Test the exact scenario that failed in production.
 
         Reproduces: Body=We+raised+250K+from+Elon+Musk
         Verifies: Agent responds reliably to funding announcements
         """
         # Reset session first
-        self._send_whatsapp_message("reset")
+        self._send_whatsapp_message("reset", phone=unique_phone)
 
         # The exact message that failed in production
-        response, duration = self._send_whatsapp_message("We raised 250K from Elon Musk")
+        response, duration = self._send_whatsapp_message(
+            "We raised 250K from Elon Musk", phone=unique_phone
+        )
 
         # Verify response basics
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
@@ -135,12 +143,13 @@ class TestWhatsAppReliability:
 
             print(f"✅ Message {i+1}: {duration:.2f}s - {message[:50]}...")
 
-    def test_concurrent_messages_reliability(self):
+    def test_concurrent_messages_reliability(self, unique_phone_batch):
         """Test reliability under concurrent message load."""
+        phones = unique_phone_batch(5)  # Generate 5 unique phone numbers
 
         def send_message_worker(message_id):
             """Worker function for concurrent message sending."""
-            phone = f"+1555123{message_id:04d}"  # Unique phone per thread
+            phone = phones[message_id]  # Use unique phone from fixture
             message = f"Test message {message_id}: We raised funding"
 
             try:

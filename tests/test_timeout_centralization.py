@@ -194,6 +194,13 @@ class TestTimeoutIntegration:
                 mock_client = MagicMock()
                 mock_get_client.return_value = mock_client
 
+                # Mock the run to complete immediately
+                mock_run = MagicMock()
+                mock_run.status = "completed"
+                mock_run.id = "test_run_id"
+                mock_client.beta.threads.runs.create.return_value = mock_run
+                mock_client.beta.threads.runs.retrieve.return_value = mock_run
+
                 from app.agent_runtime import run_thread
 
                 # Should use centralized timeout values
@@ -384,7 +391,7 @@ class TestTimeoutMonitoringAndLogging:
             manager = TimeoutManager()
 
             # Update configuration should be logged
-            new_config = TimeoutConfig(openai_request_timeout=25)
+            new_config = TimeoutConfig(openai_request_timeout=25, ai_processing_timeout=30)
             manager.update_config(new_config)
 
             mock_log.info.assert_called()
@@ -403,7 +410,7 @@ class TestTimeoutMonitoringAndLogging:
         assert 'last_updated' in metrics
 
         # Update config and check metrics change
-        new_config = TimeoutConfig(openai_request_timeout=30)
+        new_config = TimeoutConfig(openai_request_timeout=30, ai_processing_timeout=35)
         manager.update_config(new_config)
 
         updated_metrics = manager.get_metrics()

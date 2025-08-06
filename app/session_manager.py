@@ -54,9 +54,7 @@ class SessionManager:
         self._total_sessions_expired = 0
 
         log.info(
-            "session_manager_initialized",
-            ttl_seconds=self.config.ttl_seconds,
-            cleanup_interval=self.config.cleanup_interval,
+            f"session_manager_initialized ttl_seconds={self.config.ttl_seconds} cleanup_interval={self.config.cleanup_interval}"
         )
 
     def get_session(self, phone: str) -> Optional[str]:
